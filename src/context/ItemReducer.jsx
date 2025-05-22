@@ -1,25 +1,31 @@
+import { createContext, useReducer, useContext } from 'react'
+
 const initialState = {
   items: [],
   selectedItems: [],
   pedidos: [],
 }
 
-const Reducer = (state, action) => {
+const itemReducer = (state, action) => {
   switch (action.type) {
     case 'LOAD_ITEMS':
       return { ...state, items: action.payload }
     case 'TOGGLE_ITEM':
-      const updated = state.items.map((item) =>
-        item.id === action.payload ? { ...item, checked: !item.checked } : item,
-      )
-      return { ...state, items: updated }
-    case 'FECHAR_PEDIDO':
-      const selected = state.items.filter((item) => item.checked)
       return {
         ...state,
-        selectedItems: selected,
-        pedidos: [...state.pedidos, selected],
-        items: state.items.map((i) => ({ ...i, checked: false })),
+        items: state.items.map((item) =>
+          item.id === action.payload
+            ? { ...item, checked: !item.checked }
+            : item,
+        ),
+      }
+    case 'FECHAR_PEDIDO':
+      const selecionados = state.items.filter((item) => item.checked)
+      return {
+        ...state,
+        selectedItems: selecionados,
+        pedidos: [...state.pedidos, selecionados],
+        items: state.items.map((item) => ({ ...item, checked: false })),
       }
     case 'RETORNAR_ITEM':
       return {
@@ -34,4 +40,18 @@ const Reducer = (state, action) => {
   }
 }
 
-export { initialState, Reducer }
+const ItemContext = createContext()
+
+const ItemProvider = ({ children }) => {
+  const [state, dispatch] = useReducer(itemReducer, initialState)
+
+  return (
+    <ItemContext.Provider value={{ state, dispatch }}>
+      {children}
+    </ItemContext.Provider>
+  )
+}
+
+const useItemContext = () => useContext(ItemContext)
+
+export { ItemProvider, useItemContext }
