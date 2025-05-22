@@ -1,6 +1,6 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
-import { AddForm } from '@/pages/AddForm'
 import { Home } from '@/pages/Home'
+import { AddForm } from '@/pages/AddForm'
 
 const AppRoutes = () => (
   <Router>
