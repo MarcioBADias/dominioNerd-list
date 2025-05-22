@@ -1,14 +1,12 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
-import Home from '../pages/Home'
-import Checkout from '../pages/Checkout'
-import Orders from '../pages/orders'
+import { Home } from '../pages/Home'
+import { AddForm } from '../pages/AddForm'
 
 const AppRoutes = () => (
   <Router>
     <Routes>
       <Route path="/" element={<Home />} />
-      <Route path="/checkout" element={<Checkout />} />
-      <Route path="/orders" element={<Orders />} />
+      <Route path="/add-form" element={<AddForm />} />
     </Routes>
   </Router>
 )

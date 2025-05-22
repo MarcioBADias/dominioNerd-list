@@ -1,8 +1,11 @@
+import { AppRoutes } from './routes'
+import { ItemProvider } from './context/ItemReducer'
+
 const App = () => {
   return (
-    <>
-      <h1>Boilerplace + React</h1>
-    </>
+    <ItemProvider>
+      <AppRoutes />
+    </ItemProvider>
   )
 }
 
