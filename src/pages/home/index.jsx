@@ -1,7 +1,7 @@
 import { useEffect } from 'react'
 import { supabase } from '../../services/supabase'
 import { useItemContext } from '../../context/ItemReducer'
-import { Container, ItemList, Item, ItemInfo, Check } from './style'
+import { Check, Container, Item, ItemInfo, ItemList } from './style'
 
 const Home = () => {
   const { state, dispatch } = useItemContext()
