@@ -1,11 +1,23 @@
 import { useState } from 'react'
 import { supabase } from '../../services/supabase'
-import { Container, Form, Label, Input, Button } from './style'
+import { Container, Form, Label, Input, Button, Select } from './style'
+
+const editions = {
+  spv: 'Spider-Verse',
+  cltr: 'Collectors Trove',
+  bp: 'Black Panther',
+  mot: 'Masters of Time',
+  dwx: 'Deadpool Weapon X',
+  msnp: 'Marvel Studios Next Phase',
+  wov: 'Wheels of Vegeance',
+  not: 'Notorious',
+}
 
 const AddForm = () => {
   const [formData, setFormData] = useState({
     name: '',
     edition: '',
+    serialNumber: '',
     price: '',
     quantity: '',
   })
@@ -20,9 +32,9 @@ const AddForm = () => {
   const handleSubmit = async (e) => {
     e.preventDefault()
 
-    const { name, edition, price, quantity } = formData
+    const { name, edition, serialNumber, price, quantity } = formData
 
-    if (!name || !edition || !price || !quantity) {
+    if (!name || !edition || !serialNumber || !price || !quantity) {
       alert('Preencha todos os campos')
       return
     }
@@ -31,6 +43,7 @@ const AddForm = () => {
       {
         name,
         edition,
+        serialNumber,
         price: parseFloat(price),
         quantity: parseInt(quantity),
       },
@@ -41,7 +54,13 @@ const AddForm = () => {
       alert('Erro ao adicionar item.')
     } else {
       alert('Item adicionado com sucesso!')
-      setFormData({ name: '', edicao: '', price: '', quantity: '' })
+      setFormData({
+        name: '',
+        edicao: '',
+        serialNumber: '',
+        price: '',
+        quantity: '',
+      })
     }
   }
 
@@ -58,10 +77,20 @@ const AddForm = () => {
         />
 
         <Label>Edição</Label>
+        <Select name="edition" value={formData.edition} onChange={handleChange}>
+          <option value="">Selecione uma edição</option>
+          {Object.entries(editions).map(([value, label]) => (
+            <option key={value} value={value}>
+              {label}
+            </option>
+          ))}
+        </Select>
+
+        <Label>Numero da Peça</Label>
         <Input
-          type="text"
-          name="edition"
-          value={formData.edition}
+          type="number"
+          name="serialNumber"
+          value={formData.serialNumber}
           onChange={handleChange}
         />
 

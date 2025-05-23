@@ -21,6 +21,12 @@ export const Input = styled.input`
   border-radius: 8px;
   border: 1px solid #ccc;
 `
+export const Select = styled.select`
+  padding: 8px;
+  font-size: 16px;
+  border-radius: 5px;
+  margin-bottom: 10px;
+`
 
 export const Button = styled.button`
   background-color: #4caf50;

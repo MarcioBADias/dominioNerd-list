@@ -22,7 +22,7 @@ export const Item = styled.li`
 
 export const ItemInfo = styled.div`
   display: flex;
-  flex-direction: column;
+  justify-content: space-around;
   width: 100%;
 `
 

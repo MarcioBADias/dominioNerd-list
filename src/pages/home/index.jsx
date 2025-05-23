@@ -36,10 +36,18 @@ const Home = () => {
               onChange={() => toggleItem(item.id)}
             />
             <ItemInfo>
-              <strong>{item.name}</strong>
-              <span>Edição: {item.edition}</span>
-              <span>Preço: R$ {item.price}</span>
-              <span>Quantidade: {item.quantity}</span>
+              <div>
+                <strong>{item.name}</strong>
+              </div>
+              <div>
+                <span>Edição: {item.edition}</span>
+              </div>
+              <div>
+                <span>Preço: R$ {item.price}</span>
+              </div>
+              <div>
+                <span>Quantidade: {item.quantity}</span>
+              </div>
             </ItemInfo>
           </Item>
         ))}
