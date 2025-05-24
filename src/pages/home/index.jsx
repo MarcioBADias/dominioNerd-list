@@ -42,12 +42,18 @@ const Home = () => {
                   alt=""
                 />
               </div>
-              <div>
-                <strong>{item.name}</strong>
-              </div>
               <div style={{ display: 'flex', flexDirection: 'column' }}>
-                <span>Preço: R$ {item.price}</span>
-                <span>Quantidade: {item.quantity}</span>
+                <strong>{item.name}</strong>
+                <span>R$ {item.price},00</span>
+                <span>Qtd: {item.quantity} und</span>
+                <span>
+                  <a
+                    href={`https://hcunits.net/units/${item.edition}${item.serialNumber}/`}
+                    target="_blank"
+                  >
+                    Ver card
+                  </a>
+                </span>
               </div>
             </ItemInfo>
           </Item>

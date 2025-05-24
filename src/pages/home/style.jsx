@@ -5,8 +5,16 @@ export const Container = styled.div`
 `
 
 export const ItemList = styled.ul`
+  display: flex;
+  gap: 50px;
+  flex-wrap: wrap;
   list-style: none;
   padding: 0;
+  margin-top: 50px;
+
+  @media (max-width: 840px) {
+    display: block;
+  }
 `
 
 export const Item = styled.li`
@@ -18,12 +26,17 @@ export const Item = styled.li`
   align-items: center;
   justify-content: space-between;
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  width: 30%;
+
+  @media (max-width: 840px) {
+    width: 100%;
+  }
 `
 
 export const ItemInfo = styled.div`
   align-items: center;
   display: flex;
-  justify-content: space-around;
+  gap: 50px;
   width: 100%;
 `
 export const Image = styled.img`
@@ -31,5 +44,5 @@ export const Image = styled.img`
   width: 100px;
 `
 export const Check = styled.input`
-  margin-right: 12px;
+  margin-right: 40px;
 `
