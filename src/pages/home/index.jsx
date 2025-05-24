@@ -38,17 +38,15 @@ const Home = () => {
             <ItemInfo>
               <div>
                 <Image
-                  src={`https://hcunits.net/static/images/set/${item.edition}/0${item.serialNumber}.png`}
+                  src={`https://hcunits.net/static/images/set/${item.edition}/${item.serialNumber}.png`}
                   alt=""
                 />
               </div>
               <div>
                 <strong>{item.name}</strong>
               </div>
-              <div>
+              <div style={{ display: 'flex', flexDirection: 'column' }}>
                 <span>Preço: R$ {item.price}</span>
-              </div>
-              <div>
                 <span>Quantidade: {item.quantity}</span>
               </div>
             </ItemInfo>
