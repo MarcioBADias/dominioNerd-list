@@ -21,11 +21,15 @@ export const Item = styled.li`
 `
 
 export const ItemInfo = styled.div`
+  align-items: center;
   display: flex;
   justify-content: space-around;
   width: 100%;
 `
-
+export const Image = styled.img`
+  height: 100px;
+  width: 100px;
+`
 export const Check = styled.input`
   margin-right: 12px;
 `

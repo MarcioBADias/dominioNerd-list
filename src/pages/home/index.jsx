@@ -1,7 +1,7 @@
 import { useEffect } from 'react'
 import { supabase } from '../../services/supabase'
 import { useItemContext } from '../../context/ItemReducer'
-import { Check, Container, Item, ItemInfo, ItemList } from './style'
+import { Check, Container, Image, Item, ItemInfo, ItemList } from './style'
 
 const Home = () => {
   const { state, dispatch } = useItemContext()
@@ -37,10 +37,13 @@ const Home = () => {
             />
             <ItemInfo>
               <div>
-                <strong>{item.name}</strong>
+                <Image
+                  src={`https://hcunits.net/static/images/set/${item.edition}/0${item.serialNumber}.png`}
+                  alt=""
+                />
               </div>
               <div>
-                <span>Edição: {item.edition}</span>
+                <strong>{item.name}</strong>
               </div>
               <div>
                 <span>Preço: R$ {item.price}</span>

@@ -88,7 +88,7 @@ const AddForm = () => {
 
         <Label>Numero da Peça</Label>
         <Input
-          type="number"
+          type="text"
           name="serialNumber"
           value={formData.serialNumber}
           onChange={handleChange}
