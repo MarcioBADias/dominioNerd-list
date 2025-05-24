@@ -1,14 +1,29 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { supabase } from '../../services/supabase'
 import { useItemContext } from '../../context/ItemReducer'
 import { Check, Container, Image, Item, ItemInfo, ItemList } from './style'
+import { useNavigate } from 'react-router-dom'
 
 const Home = () => {
   const { state, dispatch } = useItemContext()
+  const [itens, setItens] = useState([])
+  const [selectedItems, setSelectedItems] = useState([])
+  const navigate = useNavigate()
+
+  const toggleSelect = (itemId) => {
+    setSelectedItems((prev) =>
+      prev.includes(itemId)
+        ? prev.filter((id) => id !== itemId)
+        : [...prev, itemId],
+    )
+  }
 
   useEffect(() => {
     const fetchItems = async () => {
-      const { data, error } = await supabase.from('itens').select('*')
+      const { data, error } = await supabase
+        .from('itens')
+        .select('*')
+        .eq('for_sale', true)
       if (error) {
         console.error('Erro ao buscar itens:', error)
       } else {
@@ -20,8 +35,21 @@ const Home = () => {
     fetchItems()
   }, [])
 
-  const toggleItem = (id) => {
-    dispatch({ type: 'TOGGLE_ITEM', payload: id })
+  const handleEnviarPedido = async () => {
+    const { error } = await supabase
+      .from('itens')
+      .update({ for_sale: false })
+      .in('id', selectedItems)
+
+    if (!error) {
+      setItens((prev) =>
+        prev.filter((item) => !selectedItems.includes(item.id)),
+      )
+      navigate('/pending')
+    } else {
+      alert('Erro ao enviar pedido')
+      console.error(error)
+    }
   }
 
   return (
@@ -32,8 +60,8 @@ const Home = () => {
           <Item key={item.id}>
             <Check
               type="checkbox"
-              checked={item.checked || false}
-              onChange={() => toggleItem(item.id)}
+              checked={selectedItems.includes(item.id)}
+              onChange={() => toggleSelect(item.id)}
             />
             <ItemInfo>
               <div>
@@ -59,6 +87,9 @@ const Home = () => {
           </Item>
         ))}
       </ItemList>
+      {selectedItems.length > 0 && (
+        <button onClick={handleEnviarPedido}>Enviar Pedido</button>
+      )}
     </Container>
   )
 }
