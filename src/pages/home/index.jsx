@@ -3,12 +3,18 @@ import { supabase } from '../../services/supabase'
 import { useItemContext } from '../../context/ItemReducer'
 import { Check, Container, Image, Item, ItemInfo, ItemList } from './style'
 import { useNavigate } from 'react-router-dom'
+import { QuantitySelector } from '../../components/QuantitySelector'
 
 const Home = () => {
   const { state, dispatch } = useItemContext()
   const [itens, setItens] = useState([])
   const [selectedItems, setSelectedItems] = useState([])
+  const [showQuantitySelector, setShowQuantitySelector] = useState(false)
   const navigate = useNavigate()
+
+  const selectedItemObjects = state.items.filter((item) =>
+    selectedItems.includes(item.id),
+  )
 
   const toggleSelect = (itemId) => {
     setSelectedItems((prev) =>
@@ -35,21 +41,44 @@ const Home = () => {
     fetchItems()
   }, [])
 
-  const handleEnviarPedido = async () => {
-    const { error } = await supabase
-      .from('itens')
-      .update({ for_sale: false })
-      .in('id', selectedItems)
+  const handleSendingOrders = () => {
+    setShowQuantitySelector(true)
+  }
 
-    if (!error) {
-      setItens((prev) =>
-        prev.filter((item) => !selectedItems.includes(item.id)),
-      )
-      navigate('/pending')
-    } else {
-      alert('Erro ao enviar pedido')
-      console.error(error)
+  const checkout = async (quantities) => {
+    const user = JSON.parse(localStorage.getItem('user'))
+    console.log(user.name)
+
+    for (const item of selectedItemObjects) {
+      const quantidadeSelecionada = quantities[item.id]
+      console.log({
+        item_id: item.id,
+        item_name: item.name,
+        price: item.price,
+        quantity: quantidadeSelecionada,
+        purchaser: user?.name || 'desconhecido',
+        contact: user?.phone || '',
+      })
+      await supabase.from('orders').insert({
+        item_id: item.id,
+        item_name: item.name,
+        price: item.price,
+        quantity: quantidadeSelecionada,
+        purchaser: user?.name || 'desconhecido',
+        contact: user?.phone || '',
+      })
+
+      const novaQuantidade = item.quantity - quantidadeSelecionada
+      await supabase
+        .from('itens')
+        .update({
+          quantity: novaQuantidade,
+          for_sale: novaQuantidade > 0,
+        })
+        .eq('id', item.id)
     }
+
+    navigate('/pending')
   }
 
   return (
@@ -88,7 +117,14 @@ const Home = () => {
         ))}
       </ItemList>
       {selectedItems.length > 0 && (
-        <button onClick={handleEnviarPedido}>Enviar Pedido</button>
+        <button onClick={handleSendingOrders}>Enviar Pedido</button>
+      )}
+      {showQuantitySelector && (
+        <QuantitySelector
+          items={selectedItemObjects}
+          onSubmit={checkout}
+          onCancel={() => setShowQuantitySelector(false)}
+        />
       )}
     </Container>
   )

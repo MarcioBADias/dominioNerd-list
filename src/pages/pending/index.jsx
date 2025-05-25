@@ -9,9 +9,9 @@ const Pending = () => {
   useEffect(() => {
     const fetchPending = async () => {
       const { data, error } = await supabase
-        .from('itens')
+        .from('orders')
         .select('*')
-        .eq('for_sale', false)
+        .eq('recall', false)
 
       if (!error) setPending(data)
     }
@@ -33,12 +33,15 @@ const Pending = () => {
 
   return (
     <Container>
-      <h1>pendings de USUÁRIO</h1>
+      <h1>Pedidos Pendentes</h1>
 
-      {pending.map((item) => (
-        <Card key={item.id} style={{ opacity: finish ? 0.5 : 1 }}>
-          <h3>{item.name}</h3>
-          <p>Preço: R$ {item.price.toFixed(2)}</p>
+      {pending.map((order) => (
+        <Card key={order.id} style={{ opacity: finish ? 0.5 : 1 }}>
+          <h3>{order.item_name}</h3>
+          <p>Comprador: {order.purchaser}</p>
+          <p>Contato: {order.contact}</p>
+          <p>Preço: R$ {order.price.toFixed(2)}</p>
+          <p>Qtd: {order.quantity}</p>
         </Card>
       ))}
 
