@@ -3,8 +3,8 @@ import { Home } from '@/pages/home'
 import { AddForm } from '@/pages/AddForm'
 import { Pending } from '../pages/pending'
 import { Login } from '../pages/login'
-import { PrivateRoute } from '../components/PrivateRoute'
 import { Header } from '../components/Header'
+import { PrivateRoute } from '../components/PrivateRoute'
 
 const AppRoutes = () => (
   <Router>
