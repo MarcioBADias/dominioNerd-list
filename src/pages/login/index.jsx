@@ -12,7 +12,7 @@ const Login = () => {
     e.preventDefault()
     dispatch({ type: 'SET_LOADING', value: true })
 
-    const { name, email, password, isLogin, profile } = state
+    const { name, email, password, isLogin, profile, phone } = state
 
     try {
       if (isLogin) {
@@ -41,7 +41,6 @@ const Login = () => {
               contentType: profile.type || 'image/jpeg',
               upsert: false,
             })
-          console.log('Arquivo selecionado:', profile)
 
           if (uploadError) throw uploadError
 
@@ -50,7 +49,6 @@ const Login = () => {
           } = supabase.storage.from('profile').getPublicUrl(filePath)
 
           profileUrl = publicUrl
-          console.log('URL da imagem:', profileUrl)
         }
 
         const { error: insertError } = await supabase.from('users').insert({
@@ -59,6 +57,7 @@ const Login = () => {
           password,
           phone,
           profile: profileUrl,
+          adm: false,
         })
 
         if (insertError) {
@@ -68,7 +67,8 @@ const Login = () => {
         }
       }
     } catch (err) {
-      dispatch({ type: 'SET_ERROR', value: 'Erro inesperado' })
+      console.error('Erro no cadastro:', err)
+      dispatch({ type: 'SET_ERROR', value: err.message || 'Erro inesperado' })
     } finally {
       dispatch({ type: 'SET_LOADING', value: false })
     }
@@ -105,16 +105,31 @@ const Login = () => {
               }
             />
             <Label>Imagem de avatar</Label>
-            <Input
-              type="file"
-              onChange={(e) =>
-                dispatch({
-                  type: 'SET_FIELD',
-                  field: 'profile',
-                  value: e.target.files[0],
-                })
-              }
-            />
+            {!state.showAvatarInput ? (
+              <ToggleText
+                onClick={() => dispatch({ type: 'TOGGLE_AVATAR_INPUT' })}
+              >
+                Deseja criar um avatar?
+              </ToggleText>
+            ) : (
+              <>
+                <Input
+                  type="file"
+                  onChange={(e) =>
+                    dispatch({
+                      type: 'SET_FIELD',
+                      field: 'profile',
+                      value: e.target.files[0],
+                    })
+                  }
+                />
+                <ToggleText
+                  onClick={() => dispatch({ type: 'TOGGLE_AVATAR_INPUT' })}
+                >
+                  Cancelar avatar
+                </ToggleText>
+              </>
+            )}
           </>
         )}
         <Label>Email</Label>

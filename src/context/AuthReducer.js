@@ -4,6 +4,7 @@ const initialState = {
   password: '',
   phone: '',
   profile: null,
+  showAvatarInput: false,
   isLogin: true,
   loading: false,
   error: null,
@@ -22,6 +23,10 @@ const authReducer = (state, action) => {
   if (action.type === 'SET_ERROR') {
     return { ...state, error: action.value }
   }
+  if (action.type === 'TOGGLE_AVATAR_INPUT') {
+    return { ...state, showAvatarInput: !state.showAvatarInput }
+  }
+
   return state
 }
 

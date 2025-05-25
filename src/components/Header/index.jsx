@@ -40,7 +40,7 @@ const Header = () => {
     navigate('/login')
   }
 
-  if (!userData) return null // ou um loading
+  if (!userData) return null
 
   return (
     <HeaderContainer>
