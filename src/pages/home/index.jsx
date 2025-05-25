@@ -1,16 +1,21 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../../services/supabase'
 import { useItemContext } from '../../context/ItemReducer'
-import { Check, Container, Image, Item, ItemInfo, ItemList } from './style'
-import { useNavigate } from 'react-router-dom'
+import {
+  BackdropStyle,
+  Check,
+  Container,
+  Image,
+  Item,
+  ItemInfo,
+  ItemList,
+  ModalStyle,
+} from './style'
 import { QuantitySelector } from '../../components/QuantitySelector'
 
-const Home = () => {
+const Home = ({ openPopup, onHandleSandOrders }) => {
   const { state, dispatch } = useItemContext()
-  const [itens, setItens] = useState([])
   const [selectedItems, setSelectedItems] = useState([])
-  const [showQuantitySelector, setShowQuantitySelector] = useState(false)
-  const navigate = useNavigate()
 
   const selectedItemObjects = state.items.filter((item) =>
     selectedItems.includes(item.id),
@@ -42,7 +47,7 @@ const Home = () => {
   }, [])
 
   const handleSendingOrders = () => {
-    setShowQuantitySelector(true)
+    onHandleSandOrders()
   }
 
   const checkout = async (quantities) => {
@@ -51,14 +56,6 @@ const Home = () => {
 
     for (const item of selectedItemObjects) {
       const quantidadeSelecionada = quantities[item.id]
-      console.log({
-        item_id: item.id,
-        item_name: item.name,
-        price: item.price,
-        quantity: quantidadeSelecionada,
-        purchaser: user?.name || 'desconhecido',
-        contact: user?.phone || '',
-      })
       await supabase.from('orders').insert({
         item_id: item.id,
         item_name: item.name,
@@ -77,8 +74,8 @@ const Home = () => {
         })
         .eq('id', item.id)
     }
-
-    navigate('/pending')
+    setSelectedItems([])
+    onHandleSandOrders()
   }
 
   return (
@@ -119,12 +116,16 @@ const Home = () => {
       {selectedItems.length > 0 && (
         <button onClick={handleSendingOrders}>Enviar Pedido</button>
       )}
-      {showQuantitySelector && (
-        <QuantitySelector
-          items={selectedItemObjects}
-          onSubmit={checkout}
-          onCancel={() => setShowQuantitySelector(false)}
-        />
+      {openPopup && (
+        <BackdropStyle>
+          <ModalStyle>
+            <QuantitySelector
+              items={selectedItemObjects}
+              onSubmit={checkout}
+              onCancel={onHandleSandOrders}
+            />
+          </ModalStyle>
+        </BackdropStyle>
       )}
     </Container>
   )

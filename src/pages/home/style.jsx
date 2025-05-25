@@ -2,6 +2,7 @@ import styled from 'styled-components'
 
 export const Container = styled.div`
   padding: 20px;
+  padding-top: 100px;
 `
 
 export const ItemList = styled.ul`
@@ -10,7 +11,6 @@ export const ItemList = styled.ul`
   flex-wrap: wrap;
   list-style: none;
   padding: 0;
-  margin-top: 50px;
 
   @media (max-width: 840px) {
     display: block;
@@ -45,4 +45,22 @@ export const Image = styled.img`
 `
 export const Check = styled.input`
   margin-right: 40px;
+`
+export const BackdropStyle = styled.div`
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.6);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 999;
+`
+export const ModalStyle = styled.div`
+  background-color: white;
+  padding: 2rem;
+  border-radius: 10px;
+  z-index: 1000;
 `

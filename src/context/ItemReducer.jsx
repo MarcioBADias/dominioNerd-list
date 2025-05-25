@@ -10,6 +10,7 @@ const itemReducer = (state, action) => {
   switch (action.type) {
     case 'LOAD_ITEMS':
       return { ...state, items: action.payload }
+
     case 'TOGGLE_ITEM':
       return {
         ...state,
@@ -19,6 +20,7 @@ const itemReducer = (state, action) => {
             : item,
         ),
       }
+
     case 'FECHAR_PEDIDO':
       const selecionados = state.items.filter((item) => item.checked)
       return {
@@ -27,14 +29,31 @@ const itemReducer = (state, action) => {
         pedidos: [...state.pedidos, selecionados],
         items: state.items.map((item) => ({ ...item, checked: false })),
       }
+
     case 'RETORNAR_ITEM':
+      // Evita duplicação de item retornado
+      const isAlreadyInItems = state.items.some(
+        (i) => i.id === action.payload.id,
+      )
       return {
         ...state,
-        items: [...state.items, { ...action.payload, checked: false }],
+        items: isAlreadyInItems
+          ? state.items
+          : [...state.items, { ...action.payload, checked: false }],
         pedidos: state.pedidos.map((p) =>
           p.filter((i) => i.id !== action.payload.id),
         ),
+        selectedItems: state.selectedItems.filter(
+          (i) => i.id !== action.payload.id,
+        ),
       }
+
+    case 'CLEAR_SELECTED':
+      return {
+        ...state,
+        selectedItems: [],
+      }
+
     default:
       return state
   }

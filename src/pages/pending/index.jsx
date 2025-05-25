@@ -19,35 +19,98 @@ const Pending = () => {
     fetchPending()
   }, [])
 
-  const total = pending.reduce((sum, item) => sum + item.price, 0)
+  const agruparPorComprador = () => {
+    const agrupado = {}
+
+    pending.forEach((pedido) => {
+      const nome = pedido.purchaser || 'desconhecido'
+      if (!agrupado[nome]) {
+        agrupado[nome] = []
+      }
+      agrupado[nome].push(pedido)
+    })
+
+    return agrupado
+  }
+
+  const pedidosAgrupados = agruparPorComprador()
 
   const confirmarVenda = () => {
     setFinish(true)
+    // Aqui você pode atualizar a tabela `orders` com status "confirmado", se desejar.
   }
 
-  const devolverVenda = async () => {
-    const ids = pending.map((item) => item.id)
-    await supabase.from('itens').update({ for_sale: true }).in('id', ids)
-    window.location.href = '/' // volta pra home
+  const devolverVenda = async (userName) => {
+    const pedidosUsuario = pedidosAgrupados[userName]
+
+    // Atualiza os itens para estarem disponíveis novamente
+    for (const pedido of pedidosUsuario) {
+      const { data } = await supabase
+        .from('itens')
+        .select('quantity')
+        .eq('id', pedido.item_id)
+        .single()
+
+      await supabase
+        .from('itens')
+        .update({
+          quantity: data.quantity + pedido.quantity,
+          for_sale: true,
+        })
+        .eq('id', pedido.item_id)
+    }
+
+    // Marca os pedidos como recall
+    const ids = pedidosUsuario.map((p) => p.id)
+    await supabase.from('orders').update({ recall: true }).in('id', ids)
+
+    window.location.reload()
   }
 
   return (
     <Container>
       <h1>Pedidos Pendentes</h1>
 
-      {pending.map((order) => (
-        <Card key={order.id} style={{ opacity: finish ? 0.5 : 1 }}>
-          <h3>{order.item_name}</h3>
-          <p>Comprador: {order.purchaser}</p>
-          <p>Contato: {order.contact}</p>
-          <p>Preço: R$ {order.price.toFixed(2)}</p>
-          <p>Qtd: {order.quantity}</p>
-        </Card>
-      ))}
+      {Object.entries(pedidosAgrupados).map(([comprador, pedidos]) => {
+        const totalPedido = pedidos.reduce(
+          (acc, item) => acc + item.price * item.quantity,
+          0,
+        )
 
-      <h2>Valor total: R$ {total.toFixed(2)}</h2>
-      <Button onClick={devolverVenda}>Devolver à Venda</Button>
-      <Button onClick={confirmarVenda}>Confirmar Venda</Button>
+        return (
+          <Card key={comprador} style={{ opacity: finish ? 0.5 : 1 }}>
+            <h3>Pedido de {comprador}</h3>
+
+            <ul>
+              {pedidos.map((pedido) => (
+                <li key={pedido.id}>
+                  <p>
+                    <strong>Peça:</strong> {pedido.item_name}
+                  </p>
+                  <p>
+                    <strong>Qtd:</strong> {pedido.quantity}
+                  </p>
+                  <p>
+                    <strong>Preço unitário:</strong> R${' '}
+                    {pedido.price.toFixed(2)}
+                  </p>
+                  <p>
+                    <strong>Subtotal:</strong> R${' '}
+                    {(pedido.price * pedido.quantity).toFixed(2)}
+                  </p>
+                  <hr />
+                </li>
+              ))}
+            </ul>
+
+            <h4>Total do Pedido: R$ {totalPedido.toFixed(2)}</h4>
+            <Button onClick={() => devolverVenda(comprador)}>
+              Devolver à Venda
+            </Button>
+            <Button onClick={confirmarVenda}>Confirmar Venda</Button>
+          </Card>
+        )
+      })}
     </Container>
   )
 }

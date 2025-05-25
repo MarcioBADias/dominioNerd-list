@@ -8,6 +8,7 @@ export const HeaderContainer = styled.header`
   align-items: center;
   justify-content: space-between;
   color: white;
+  position: fixed;
 `
 
 export const Logo = styled.h1`

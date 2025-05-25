@@ -9,9 +9,9 @@ import {
   LogoutIcon,
   Logo,
 } from './style'
-import { FiLogOut } from 'react-icons/fi'
+import { FiLogOut, FiShoppingCart } from 'react-icons/fi'
 
-const Header = () => {
+const Header = ({ onCartClick }) => {
   const [userData, setUserData] = useState(null)
   const navigate = useNavigate()
 
@@ -55,6 +55,9 @@ const Header = () => {
             <button onClick={() => navigate('/pending')}>Ver Pedidos</button>
           </>
         )}
+        <button onClick={onCartClick} style={{ position: 'relative' }}>
+          <FiShoppingCart size={20} />
+        </button>
       </Nav>
 
       <UserInfo>
