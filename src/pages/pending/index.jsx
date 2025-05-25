@@ -43,12 +43,8 @@ const Pending = () => {
       ))}
 
       <h2>Valor total: R$ {total.toFixed(2)}</h2>
-
-      {!finish ? (
-        <Button onClick={confirmarVenda}>Confirmar Venda</Button>
-      ) : (
-        <Button onClick={devolverVenda}>Devolver à Venda</Button>
-      )}
+      <Button onClick={devolverVenda}>Devolver à Venda</Button>
+      <Button onClick={confirmarVenda}>Confirmar Venda</Button>
     </Container>
   )
 }
