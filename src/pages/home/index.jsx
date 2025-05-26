@@ -76,6 +76,7 @@ const Home = ({ openPopup, onHandleSandOrders }) => {
     }
     setSelectedItems([])
     onHandleSandOrders()
+    window.location.reload()
   }
 
   return (

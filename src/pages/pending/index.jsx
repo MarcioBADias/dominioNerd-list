@@ -4,7 +4,7 @@ import { Button, Card, Container } from './style'
 
 const Pending = () => {
   const [pending, setPending] = useState([])
-  const [finish, setFinish] = useState(false)
+  const [finishedUsers, setFinishedUsers] = useState([])
 
   useEffect(() => {
     const fetchPending = async () => {
@@ -35,15 +35,32 @@ const Pending = () => {
 
   const pedidosAgrupados = agruparPorComprador()
 
-  const confirmarVenda = () => {
-    setFinish(true)
-    // Aqui você pode atualizar a tabela `orders` com status "confirmado", se desejar.
+  const confirmarVenda = (comprador, pedidos) => {
+    setFinishedUsers((prev) => [...prev, comprador])
+
+    const totalPedido = pedidos.reduce(
+      (acc, item) => acc + item.price * item.quantity,
+      0,
+    )
+
+    const listaTexto = pedidos
+      .map(
+        (item) =>
+          `• ${item.item_name} (x${item.quantity}) - R$ ${(item.price * item.quantity).toFixed(2)}`,
+      )
+      .join('\n')
+
+    const nomeFormatado = comprador.split(' ')[0]
+    const mensagem = `Olá ${nomeFormatado}, seu pedido na lista do Domínio Nerd ficou assim:\n\n${listaTexto}\n\nTotal de R$ ${totalPedido.toFixed(2)}.`
+
+    const telefone = '22999424224' // Seu número
+    const url = `https://wa.me/${telefone}?text=${encodeURIComponent(mensagem)}`
+    window.open(url, '_blank')
   }
 
   const devolverVenda = async (userName) => {
     const pedidosUsuario = pedidosAgrupados[userName]
 
-    // Atualiza os itens para estarem disponíveis novamente
     for (const pedido of pedidosUsuario) {
       const { data } = await supabase
         .from('itens')
@@ -66,23 +83,36 @@ const Pending = () => {
     window.location.reload()
   }
 
+  const sortedPedidosAgrupados = [
+    ...Object.entries(pedidosAgrupados).filter(
+      ([comprador]) => !finishedUsers.includes(comprador),
+    ),
+    ...Object.entries(pedidosAgrupados).filter(([comprador]) =>
+      finishedUsers.includes(comprador),
+    ),
+  ]
+
   return (
     <Container>
       <h1>Pedidos Pendentes</h1>
 
-      {Object.entries(pedidosAgrupados).map(([comprador, pedidos]) => {
+      {sortedPedidosAgrupados.map(([comprador, pedidos]) => {
         const totalPedido = pedidos.reduce(
           (acc, item) => acc + item.price * item.quantity,
           0,
         )
 
+        const isFinished = finishedUsers.includes(comprador)
+        const styleFinalizado = isFinished
+          ? { opacity: 0.4, filter: 'grayscale(100%)' }
+          : {}
+
         return (
-          <Card key={comprador} style={{ opacity: finish ? 0.5 : 1 }}>
+          <Card key={comprador} style={styleFinalizado}>
             <h2 style={{ borderBottom: '3px solid #333' }}>
               Pedido de{' '}
               <span style={{ color: '#b83242' }}>
-                {' '}
-                {comprador.toUpperCase()}{' '}
+                {comprador.toUpperCase()}
               </span>
             </h2>
 
@@ -109,10 +139,22 @@ const Pending = () => {
             </ul>
 
             <h4>Total do Pedido: R$ {totalPedido.toFixed(2)}</h4>
-            <Button onClick={() => devolverVenda(comprador)}>
+            <Button
+              onClick={() => {
+                const confirmacao = window.confirm(
+                  `Tem certeza que deseja devolver à venda o pedido de ${comprador}?`,
+                )
+                if (confirmacao) {
+                  devolverVenda(comprador)
+                }
+              }}
+            >
               Devolver à Venda
             </Button>
-            <Button onClick={confirmarVenda}>Confirmar Venda</Button>
+
+            <Button onClick={() => confirmarVenda(comprador, pedidos)}>
+              Confirmar Venda
+            </Button>
           </Card>
         )
       })}
