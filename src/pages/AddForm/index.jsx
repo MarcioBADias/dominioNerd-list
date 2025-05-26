@@ -1,17 +1,7 @@
 import { useState } from 'react'
 import { supabase } from '../../services/supabase'
 import { Container, Form, Label, Input, Button, Select } from './style'
-
-const editions = {
-  spv: 'Spider-Verse',
-  cltr: 'Collectors Trove',
-  bp: 'Black Panther',
-  mot: 'Masters of Time',
-  dwx: 'Deadpool Weapon X',
-  msnp: 'Marvel Studios Next Phase',
-  wov: 'Wheels of Vegeance',
-  not: 'Notorious',
-}
+import { editions } from '../../services/utils'
 
 const AddForm = () => {
   const [formData, setFormData] = useState({

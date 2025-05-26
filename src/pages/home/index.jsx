@@ -12,10 +12,12 @@ import {
   ModalStyle,
 } from './style'
 import { QuantitySelector } from '../../components/QuantitySelector'
+import { EditionSelector } from '../../components/EditionSelector'
 
 const Home = ({ openPopup, onHandleSandOrders }) => {
   const { state, dispatch } = useItemContext()
   const [selectedItems, setSelectedItems] = useState([])
+  const [selectedEdition, setSelectedEdition] = useState(null)
 
   const selectedItemObjects = state.items.filter((item) =>
     selectedItems.includes(item.id),
@@ -81,38 +83,51 @@ const Home = ({ openPopup, onHandleSandOrders }) => {
 
   return (
     <Container>
-      <h1>Lista de Itens</h1>
+      <h1 style={{ textAlign: 'center' }}>Lista de Itens</h1>
+      <div>
+        <p style={{ fontSize: 12, fontWeight: 'bold', textAlign: 'center' }}>
+          Filtro por edição:
+        </p>
+        <EditionSelector
+          selectedEdition={selectedEdition}
+          onSelect={setSelectedEdition}
+        />
+      </div>
       <ItemList>
-        {state.items.map((item) => (
-          <Item key={item.id}>
-            <Check
-              type="checkbox"
-              checked={selectedItems.includes(item.id)}
-              onChange={() => toggleSelect(item.id)}
-            />
-            <ItemInfo>
-              <div>
-                <Image
-                  src={`https://hcunits.net/static/images/set/${item.edition}/${item.serialNumber}.png`}
-                  alt=""
-                />
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column' }}>
-                <strong>{item.name}</strong>
-                <span>R$ {item.price},00</span>
-                <span>Qtd: {item.quantity} und</span>
-                <span>
-                  <a
-                    href={`https://hcunits.net/units/${item.edition}${item.serialNumber}/`}
-                    target="_blank"
-                  >
-                    Ver card
-                  </a>
-                </span>
-              </div>
-            </ItemInfo>
-          </Item>
-        ))}
+        {state.items
+          .filter(
+            (item) => !selectedEdition || item.edition === selectedEdition,
+          )
+          .map((item) => (
+            <Item key={item.id}>
+              <Check
+                type="checkbox"
+                checked={selectedItems.includes(item.id)}
+                onChange={() => toggleSelect(item.id)}
+              />
+              <ItemInfo>
+                <div>
+                  <Image
+                    src={`https://hcunits.net/static/images/set/${item.edition}/${item.serialNumber}.png`}
+                    alt=""
+                  />
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                  <strong>{item.name}</strong>
+                  <span>R$ {item.price},00</span>
+                  <span>Qtd: {item.quantity} und</span>
+                  <span>
+                    <a
+                      href={`https://hcunits.net/units/${item.edition}${item.serialNumber}/`}
+                      target="_blank"
+                    >
+                      Ver card
+                    </a>
+                  </span>
+                </div>
+              </ItemInfo>
+            </Item>
+          ))}
       </ItemList>
       {openPopup && (
         <BackdropStyle>
