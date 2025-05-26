@@ -53,7 +53,7 @@ const Pending = () => {
     const nomeFormatado = comprador.split(' ')[0]
     const mensagem = `Olá ${nomeFormatado}, seu pedido na lista do Domínio Nerd ficou assim:\n\n${listaTexto}\n\nTotal de R$ ${totalPedido.toFixed(2)}.`
 
-    const telefone = '22999424224' // Seu número
+    const telefone = '5522999424224'
     const url = `https://wa.me/${telefone}?text=${encodeURIComponent(mensagem)}`
     window.open(url, '_blank')
   }
