@@ -66,14 +66,6 @@ const Header = ({ onCartClick }) => {
                 </div>
               </div>
             </button>
-            <button onClick={onCartClick} style={{ position: 'relative' }}>
-              <div>
-                <BsCartCheckFill size={40} />
-              </div>
-              <div>
-                <p style={{ fontSize: 7 }}>Fechar pedido</p>
-              </div>
-            </button>
             <button onClick={() => navigate('/pending')}>
               <div>
                 <RiListView size={40} />
@@ -84,6 +76,14 @@ const Header = ({ onCartClick }) => {
             </button>
           </>
         )}
+        <button onClick={onCartClick} style={{ position: 'relative' }}>
+          <div>
+            <BsCartCheckFill size={40} />
+          </div>
+          <div>
+            <p style={{ fontSize: 7 }}>Fechar pedido</p>
+          </div>
+        </button>
       </Nav>
 
       <UserInfo>
