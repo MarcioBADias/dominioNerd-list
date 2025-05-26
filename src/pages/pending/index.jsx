@@ -51,7 +51,7 @@ const Pending = () => {
       .join('\n')
 
     const nomeFormatado = comprador.split(' ')[0]
-    const mensagem = `Olá ${nomeFormatado}, seu pedido na lista do Domínio Nerd ficou assim:\n\n${listaTexto}\n\nTotal de R$ ${totalPedido.toFixed(2)}.`
+    const mensagem = `Olá *${nomeFormatado}*, seu pedido na lista do *Domínio Nerd* ficou assim:\n\n${listaTexto}\n\n*Total de R$ ${totalPedido.toFixed(2)}*.`
 
     const telefone = `55${pedidos[0]?.contact?.replace(/\D/g, '')}` // remove caracteres não numéricos
     const url = `https://wa.me/${telefone}?text=${encodeURIComponent(mensagem)}`
