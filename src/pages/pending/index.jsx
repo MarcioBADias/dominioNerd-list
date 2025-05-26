@@ -60,7 +60,6 @@ const Pending = () => {
         .eq('id', pedido.item_id)
     }
 
-    // Marca os pedidos como recall
     const ids = pedidosUsuario.map((p) => p.id)
     await supabase.from('orders').update({ recall: true }).in('id', ids)
 
@@ -79,9 +78,15 @@ const Pending = () => {
 
         return (
           <Card key={comprador} style={{ opacity: finish ? 0.5 : 1 }}>
-            <h3>Pedido de {comprador}</h3>
+            <h2 style={{ borderBottom: '3px solid #333' }}>
+              Pedido de{' '}
+              <span style={{ color: '#b83242' }}>
+                {' '}
+                {comprador.toUpperCase()}{' '}
+              </span>
+            </h2>
 
-            <ul>
+            <ul style={{ listStyle: 'none' }}>
               {pedidos.map((pedido) => (
                 <li key={pedido.id}>
                   <p>

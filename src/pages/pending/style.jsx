@@ -1,6 +1,7 @@
 import styled from 'styled-components'
 
 export const Container = styled.div`
+  padding: 20px;
   padding-top: 100px;
 `
 
@@ -18,4 +19,5 @@ export const Button = styled.button`
   color: white;
   border: none;
   border-radius: 8px;
+  margin-left: 20px;
 `
