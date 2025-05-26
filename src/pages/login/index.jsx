@@ -1,7 +1,15 @@
 import { useReducer } from 'react'
 import { supabase } from '../../services/supabase'
 import { useNavigate } from 'react-router-dom'
-import { Container, Form, Input, Button, ToggleText, Label } from './style'
+import {
+  Container,
+  Form,
+  Input,
+  Button,
+  ToggleText,
+  Label,
+  Logo,
+} from './style'
 import { authReducer, initialState } from '../../context/AuthReducer'
 
 const Login = () => {
@@ -76,6 +84,7 @@ const Login = () => {
 
   return (
     <Container>
+      <Logo src="/Logo_DominioNerd_Black.png" />
       <h1>{state.isLogin ? 'Login' : 'Cadastro'}</h1>
       <Form onSubmit={handleSubmit}>
         {!state.isLogin && (

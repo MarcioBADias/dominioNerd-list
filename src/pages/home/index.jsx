@@ -113,9 +113,6 @@ const Home = ({ openPopup, onHandleSandOrders }) => {
           </Item>
         ))}
       </ItemList>
-      {selectedItems.length > 0 && (
-        <button onClick={handleSendingOrders}>Enviar Pedido</button>
-      )}
       {openPopup && (
         <BackdropStyle>
           <ModalStyle>

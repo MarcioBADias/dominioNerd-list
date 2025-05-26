@@ -22,6 +22,14 @@ const QuantitySelector = ({ items, onSubmit, onCancel }) => {
           <strong>{item.name}</strong>
           <div>
             <button
+              style={{
+                marginRight: 10,
+                paddingRight: 8,
+                paddingLeft: 8,
+                backgroundColor: '#222',
+                color: 'white',
+                borderRadius: 10,
+              }}
               onClick={() => handleChange(item.id, quantities[item.id] - 1)}
             >
               -
@@ -35,17 +43,46 @@ const QuantitySelector = ({ items, onSubmit, onCancel }) => {
               style={{ width: 50 }}
             />
             <button
+              style={{
+                marginLeft: 10,
+                paddingRight: 5,
+                paddingLeft: 5,
+                backgroundColor: '#222',
+                color: 'white',
+                borderRadius: 10,
+              }}
               onClick={() => handleChange(item.id, quantities[item.id] + 1)}
             >
               +
             </button>
-            <span> / {item.quantity} disponíveis</span>
+            <span> {item.quantity} disponíveis</span>
           </div>
         </div>
       ))}
       <br />
-      <button onClick={() => onSubmit(quantities)}>Enviar pedido</button>
-      <button onClick={onCancel}>Cancelar</button>
+      <button
+        style={{
+          padding: 5,
+          backgroundColor: '#222',
+          color: 'white',
+          borderRadius: 10,
+        }}
+        onClick={() => onSubmit(quantities)}
+      >
+        Enviar pedido
+      </button>
+      <button
+        style={{
+          marginLeft: 20,
+          padding: 5,
+          backgroundColor: '#222',
+          color: 'white',
+          borderRadius: 10,
+        }}
+        onClick={onCancel}
+      >
+        Cancelar
+      </button>
     </div>
   )
 }

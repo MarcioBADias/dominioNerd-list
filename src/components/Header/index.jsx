@@ -9,7 +9,10 @@ import {
   LogoutIcon,
   Logo,
 } from './style'
-import { FiLogOut, FiShoppingCart } from 'react-icons/fi'
+import { BsCartCheckFill } from 'react-icons/bs'
+import { MdOutlineAddBusiness } from 'react-icons/md'
+import { RiListView } from 'react-icons/ri'
+import { FiLogOut } from 'react-icons/fi'
 
 const Header = ({ onCartClick }) => {
   const [userData, setUserData] = useState(null)
@@ -44,29 +47,65 @@ const Header = ({ onCartClick }) => {
 
   return (
     <HeaderContainer>
-      <Logo onClick={() => navigate('/')}>MinhaLogo</Logo>
+      <Logo
+        src="/Logo_DominioNerd_White.png"
+        alt="Logo Dominio Nerd"
+        onClick={() => navigate('/')}
+      />
 
       <Nav>
         {userData.adm && (
           <>
             <button onClick={() => navigate('/add-form')}>
-              Cadastrar Itens
+              <div>
+                <div>
+                  <MdOutlineAddBusiness size={40} />
+                </div>
+                <div>
+                  <p style={{ fontSize: 7 }}>Cadastrar Itens</p>
+                </div>
+              </div>
             </button>
-            <button onClick={() => navigate('/pending')}>Ver Pedidos</button>
+            <button onClick={() => navigate('/pending')}>
+              <div>
+                <RiListView size={40} />
+              </div>
+              <div>
+                <p style={{ fontSize: 7 }}>Ver Pedidos</p>
+              </div>
+            </button>
           </>
         )}
         <button onClick={onCartClick} style={{ position: 'relative' }}>
-          <FiShoppingCart size={20} />
+          <div>
+            <BsCartCheckFill size={40} />
+          </div>
+          <div>
+            <p style={{ fontSize: 7 }}>Fechar pedido</p>
+          </div>
         </button>
       </Nav>
 
       <UserInfo>
-        <span>{userData.name}</span>
         {userData.profile && (
-          <ProfileImage src={userData.profile} alt="Profile" />
+          <div>
+            <div>
+              <ProfileImage src={userData.profile} alt="Profile" />
+            </div>
+            <div>
+              <span>{userData.name}</span>
+            </div>
+          </div>
         )}
         <LogoutIcon onClick={handleLogout}>
-          <FiLogOut size={20} />
+          <div>
+            <div>
+              <FiLogOut size={20} />
+            </div>
+            <div>
+              <p style={{ fontSize: 7 }}>Sair</p>
+            </div>
+          </div>
         </LogoutIcon>
       </UserInfo>
     </HeaderContainer>

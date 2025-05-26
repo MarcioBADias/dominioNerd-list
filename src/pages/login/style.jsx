@@ -6,6 +6,9 @@ export const Container = styled.div`
   padding: 2rem;
   text-align: center;
 `
+export const Logo = styled.img`
+  width: 150px;
+`
 
 export const Form = styled.form`
   display: flex;

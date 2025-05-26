@@ -11,10 +11,10 @@ export const HeaderContainer = styled.header`
   position: fixed;
 `
 
-export const Logo = styled.h1`
+export const Logo = styled.img`
   font-size: 1.5rem;
   cursor: pointer;
-  color: #61dafb;
+  width: 50px;
 `
 
 export const Nav = styled.nav`
