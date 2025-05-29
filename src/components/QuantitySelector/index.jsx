@@ -1,5 +1,3 @@
-// QuantitySelector.jsx
-
 import { useState } from 'react'
 
 const QuantitySelector = ({ items, onSubmit, onCancel }) => {
@@ -16,9 +14,8 @@ const QuantitySelector = ({ items, onSubmit, onCancel }) => {
     setQuantities({ ...quantities, [itemId]: newValue })
   }
 
-  // Novo cálculo do valor total do pedido
   const totalPrice = items.reduce((acc, item) => {
-    const selectedQuantity = quantities[item.id] || 0 // Garante que seja 0 se não houver quantidade
+    const selectedQuantity = quantities[item.id] || 0
     return acc + item.price * selectedQuantity
   }, 0)
 
@@ -69,7 +66,6 @@ const QuantitySelector = ({ items, onSubmit, onCancel }) => {
             <span> {item.quantity} disponíveis</span>
           </div>
           <div style={{ marginBottom: 10 }}>
-            {/* Subtotal por item - corrigido para usar a quantidade selecionada */}
             <strong>
               Subtotal: R$ {item.price * (quantities[item.id] || 0)},00
             </strong>
@@ -77,7 +73,6 @@ const QuantitySelector = ({ items, onSubmit, onCancel }) => {
         </div>
       ))}
       <br />
-      {/* Exibição do valor final do pedido */}
       <h2>Valor final do pedido: R$ {totalPrice},00</h2>
       <br />
       <button
