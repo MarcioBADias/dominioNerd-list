@@ -15,6 +15,7 @@ const Pending = () => {
         .from('orders')
         .select('*')
         .eq('recall', false)
+        .order('created_at', { ascending: true })
 
       if (!error) setPending(data)
     }
@@ -27,10 +28,13 @@ const Pending = () => {
 
     pending.forEach((pedido) => {
       const nome = pedido.purchaser || 'desconhecido'
-      if (!agrupado[nome]) {
-        agrupado[nome] = []
+      const dataPedido = new Date(pedido.created_at)
+      const chaveAgrupamento = `${nome}-${dataPedido.getFullYear()}-${(dataPedido.getMonth() + 1).toString().padStart(2, '0')}-${dataPedido.getDate().toString().padStart(2, '0')} ${dataPedido.getHours().toString().padStart(2, '0')}:${dataPedido.getMinutes().toString().padStart(2, '0')}`
+
+      if (!agrupado[chaveAgrupamento]) {
+        agrupado[chaveAgrupamento] = []
       }
-      agrupado[nome].push(pedido)
+      agrupado[chaveAgrupamento].push(pedido)
     })
 
     return agrupado
@@ -38,9 +42,10 @@ const Pending = () => {
 
   const pedidosAgrupados = agruparPorComprador()
 
-  const confirmarVenda = (comprador, pedidos) => {
-    setFinishedUsers((prev) => [...prev, comprador])
+  const confirmarVenda = (compradorKey, pedidos) => {
+    const nomeCompradorReal = compradorKey.split('-')[0]
 
+    setFinishedUsers((prev) => [...prev, compradorKey])
     const totalPedido = pedidos.reduce(
       (acc, item) => acc + item.price * item.quantity,
       0,
@@ -53,7 +58,7 @@ const Pending = () => {
       )
       .join('\n')
 
-    const nomeFormatado = comprador.split(' ')[0]
+    const nomeFormatado = nomeCompradorReal.split(' ')[0]
     const mensagem = `Olá *${nomeFormatado}*, seu pedido na lista do *Domínio Nerd* ficou assim:\n\n${listaTexto}\n\n*Total de R$ ${totalPedido.toFixed(2)}*.`
 
     const telefone = `55${pedidos[0]?.contact?.replace(/\D/g, '')}`
@@ -61,8 +66,13 @@ const Pending = () => {
     window.open(url, '_blank')
   }
 
-  const devolverVenda = async (userName) => {
-    const pedidosUsuario = pedidosAgrupados[userName]
+  const devolverVenda = async (compradorKey) => {
+    const pedidosUsuario = pedidosAgrupados[compradorKey]
+
+    if (!pedidosUsuario) {
+      console.warn('Pedido não encontrado para devolução:', compradorKey)
+      return
+    }
 
     for (const pedido of pedidosUsuario) {
       const { data } = await supabase
@@ -145,10 +155,10 @@ const Pending = () => {
 
   const sortedPedidosAgrupados = [
     ...Object.entries(pedidosAgrupados).filter(
-      ([comprador]) => !finishedUsers.includes(comprador),
+      ([compradorKey]) => !finishedUsers.includes(compradorKey),
     ),
-    ...Object.entries(pedidosAgrupados).filter(([comprador]) =>
-      finishedUsers.includes(comprador),
+    ...Object.entries(pedidosAgrupados).filter(([compradorKey]) =>
+      finishedUsers.includes(compradorKey),
     ),
   ]
 
@@ -156,24 +166,37 @@ const Pending = () => {
     <Container>
       <h1>Pedidos Pendentes</h1>
 
-      {sortedPedidosAgrupados.map(([comprador, pedidos]) => {
+      {sortedPedidosAgrupados.map(([compradorKey, pedidos]) => {
         const totalPedido = pedidos.reduce(
           (acc, item) => acc + item.price * item.quantity,
           0,
         )
 
-        const isFinished = finishedUsers.includes(comprador)
+        const isFinished = finishedUsers.includes(compradorKey)
         const styleFinalizado = isFinished
           ? { opacity: 0.4, filter: 'grayscale(100%)' }
           : {}
 
+        const nomeCompradorExibicao = compradorKey.split('-')[0]
+        const dataHoraPedidoExibicao = compradorKey.substring(
+          compradorKey.indexOf('-') + 1,
+        )
+
+        // Novo: Obtém o ID do primeiro item do pedido (se houver)
+        const primeiroItemId = pedidos.length > 0 ? pedidos[0].id : 'N/A'
+
         return (
-          <Card key={comprador} style={styleFinalizado}>
+          <Card key={compradorKey} style={styleFinalizado}>
             <h2 style={{ borderBottom: '3px solid #333' }}>
               Pedido de{' '}
               <span style={{ color: '#b83242' }}>
-                {comprador.toUpperCase()}
+                {nomeCompradorExibicao.toUpperCase()} nº {primeiroItemId}{' '}
+                {/* Adicionado o ID aqui */}
               </span>
+              <br />
+              <small style={{ fontSize: '0.7em', color: '#666' }}>
+                ({dataHoraPedidoExibicao})
+              </small>{' '}
             </h2>
 
             <ul style={{ listStyle: 'none' }}>
@@ -230,7 +253,9 @@ const Pending = () => {
                         }}
                       >
                         <TiArrowBack />
-                        <span style={{ fontSize: 15 }}>Devolver à venda</span>
+                        <span style={{ fontSize: 10 }}>
+                          Devolver à venda
+                        </span>{' '}
                       </div>
                     </Button>
                   </div>
@@ -242,17 +267,18 @@ const Pending = () => {
             <Button
               onClick={() => {
                 const confirmacao = window.confirm(
-                  `Tem certeza que deseja devolver à venda o pedido de ${comprador}?`,
+                  `Tem certeza que deseja devolver à venda o pedido de ${nomeCompradorExibicao} (${dataHoraPedidoExibicao})?`,
                 )
                 if (confirmacao) {
-                  devolverVenda(comprador)
+                  devolverVenda(compradorKey)
                 }
               }}
             >
-              Devolver à Venda
+              Devolver Pedido
             </Button>
 
-            <Button onClick={() => confirmarVenda(comprador, pedidos)}>
+            <Button onClick={() => confirmarVenda(compradorKey, pedidos)}>
+              {' '}
               Confirmar Venda
             </Button>
           </Card>
