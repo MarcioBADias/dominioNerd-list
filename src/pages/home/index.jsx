@@ -18,6 +18,7 @@ const Home = ({ openPopup, onHandleSandOrders }) => {
   const { state, dispatch } = useItemContext()
   const [selectedItems, setSelectedItems] = useState([])
   const [selectedEdition, setSelectedEdition] = useState(null)
+  const [showSuccessMessage, setShowSuccessMessage] = useState(false)
 
   const selectedItemObjects = state.items.filter((item) =>
     selectedItems.includes(item.id),
@@ -48,37 +49,102 @@ const Home = ({ openPopup, onHandleSandOrders }) => {
     fetchItems()
   }, [])
 
-  const handleSendingOrders = () => {
+  const handleCloseSuccessPopup = () => {
+    setShowSuccessMessage(false)
     onHandleSandOrders()
+    window.location.reload()
   }
 
   const checkout = async (quantities) => {
     const user = JSON.parse(localStorage.getItem('user'))
     console.log(user.name)
 
-    for (const item of selectedItemObjects) {
-      const quantidadeSelecionada = quantities[item.id]
-      await supabase.from('orders').insert({
-        item_id: item.id,
-        item_name: item.name,
-        price: item.price,
-        quantity: quantidadeSelecionada,
-        purchaser: user?.name || 'desconhecido',
-        contact: user?.phone || '',
+    let firstInsertedOrderId = null
+
+    try {
+      for (const item of selectedItemObjects) {
+        const quantidadeSelecionada = quantities[item.id]
+
+        if (quantidadeSelecionada <= 0) continue
+
+        const { data: insertedOrder, error: orderError } = await supabase
+          .from('orders')
+          .insert({
+            item_id: item.id,
+            item_name: item.name,
+            price: item.price,
+            quantity: quantidadeSelecionada,
+            purchaser: user?.name || 'desconhecido',
+            contact: user?.phone || '',
+          })
+          .select()
+
+        if (orderError) {
+          console.error('Erro ao inserir pedido:', orderError)
+          throw new Error('Erro ao registrar um dos itens do pedido.')
+        }
+
+        if (
+          firstInsertedOrderId === null &&
+          insertedOrder &&
+          insertedOrder.length > 0
+        ) {
+          firstInsertedOrderId = insertedOrder[0].id
+        }
+
+        const novaQuantidade = item.quantity - quantidadeSelecionada
+        const { error: updateError } = await supabase
+          .from('itens')
+          .update({
+            quantity: novaQuantidade,
+            for_sale: novaQuantidade > 0,
+          })
+          .eq('id', item.id)
+
+        if (updateError) {
+          console.error('Erro ao atualizar estoque:', updateError)
+          throw new Error('Erro ao atualizar estoque de um dos itens.')
+        }
+      }
+
+      setSelectedItems([])
+
+      setShowSuccessMessage(true)
+
+      const nomeFormatado = user?.name?.split(' ')[0] || 'Cliente'
+      let mensagemWhatsapp = `Olá *${nomeFormatado}*,\n\nSeu pedido foi registrado com número *${firstInsertedOrderId || 'ID_INDISPONIVEL'}* e será confirmado em breve.`
+      mensagemWhatsapp += `\n\nSegue a lista abaixo:\n`
+
+      selectedItemObjects.forEach((item) => {
+        const quantidadeSelecionada = quantities[item.id] || 0
+        if (quantidadeSelecionada > 0) {
+          mensagemWhatsapp += `\n• ${item.name} (x${quantidadeSelecionada}) - R$ ${(item.price * quantidadeSelecionada).toFixed(2)}`
+        }
       })
 
-      const novaQuantidade = item.quantity - quantidadeSelecionada
-      await supabase
-        .from('itens')
-        .update({
-          quantity: novaQuantidade,
-          for_sale: novaQuantidade > 0,
-        })
-        .eq('id', item.id)
+      const totalPedidoWhatsapp = selectedItemObjects.reduce((acc, item) => {
+        const quantidadeSelecionada = quantities[item.id] || 0
+        return acc + item.price * quantidadeSelecionada
+      }, 0)
+      mensagemWhatsapp += `\n\n*Total: R$ ${totalPedidoWhatsapp.toFixed(2)}*.`
+      mensagemWhatsapp += `\n\nPara alterações, é só avisar!`
+
+      const telefone = `55${user?.phone?.replace(/\D/g, '') || ''}`
+      if (telefone && telefone.length > 2) {
+        const url = `https://wa.me/${telefone}?text=${encodeURIComponent(mensagemWhatsapp)}`
+        window.open(url, '_blank')
+      } else {
+        console.warn(
+          'Número de telefone do usuário não encontrado para enviar WhatsApp.',
+        )
+      }
+    } catch (error) {
+      console.error('Falha no processo de checkout:', error.message)
+      alert(
+        'Ocorreu um erro ao finalizar o pedido. Por favor, tente novamente.',
+      )
+      onHandleSandOrders()
     }
-    setSelectedItems([])
-    onHandleSandOrders()
-    window.location.reload()
   }
 
   return (
@@ -132,11 +198,31 @@ const Home = ({ openPopup, onHandleSandOrders }) => {
       {openPopup && (
         <BackdropStyle>
           <ModalStyle>
-            <QuantitySelector
-              items={selectedItemObjects}
-              onSubmit={checkout}
-              onCancel={onHandleSandOrders}
-            />
+            {showSuccessMessage ? (
+              <div style={{ textAlign: 'center', padding: '20px' }}>
+                <h2>Seu pedido foi realizado com sucesso!</h2>
+                <p>Você receberá uma confirmação via WhatsApp.</p>
+                <button
+                  style={{
+                    padding: '10px 20px',
+                    backgroundColor: '#222',
+                    color: 'white',
+                    borderRadius: '10px',
+                    marginTop: '20px',
+                    cursor: 'pointer',
+                  }}
+                  onClick={handleCloseSuccessPopup}
+                >
+                  Fechar
+                </button>
+              </div>
+            ) : (
+              <QuantitySelector
+                items={selectedItemObjects}
+                onSubmit={checkout}
+                onCancel={onHandleSandOrders}
+              />
+            )}
           </ModalStyle>
         </BackdropStyle>
       )}
