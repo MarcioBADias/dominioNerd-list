@@ -63,4 +63,6 @@ export const ModalStyle = styled.div`
   padding: 2rem;
   border-radius: 10px;
   z-index: 1000;
+  max-height: 90vh;
+  overflow-y: auto;
 `
