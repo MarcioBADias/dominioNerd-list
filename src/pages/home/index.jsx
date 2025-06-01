@@ -13,6 +13,7 @@ import {
   ItemList,
   ModalStyle,
   FloatingCartButton,
+  FloatingTextButton,
 } from './style'
 import { QuantitySelector } from '../../components/QuantitySelector'
 import { EditionSelector } from '../../components/EditionSelector'
@@ -200,27 +201,31 @@ const Home = ({ openPopup, onHandleSandOrders }) => {
           ))}
       </ItemList>
 
-      <FloatingCartButton onClick={onHandleSandOrders}>
-        <BsCartCheckFill size={30} color="white" />
-        {selectedItems.length > 0 && (
-          <span
-            style={{
-              position: 'absolute',
-              top: 5,
-              right: 5,
-              backgroundColor: '#b83242',
-              color: 'white',
-              borderRadius: '50%',
-              padding: '2px 6px',
-              fontSize: '0.7em',
-              fontWeight: 'bold',
-            }}
-          >
-            {selectedItems.length}
-          </span>
-        )}
-      </FloatingCartButton>
-
+      <div onClick={onHandleSandOrders}>
+        <FloatingCartButton>
+          <BsCartCheckFill size={30} color="white" />
+          {selectedItems.length > 0 && (
+            <span
+              style={{
+                position: 'absolute',
+                top: 5,
+                right: 5,
+                backgroundColor: '#b83242',
+                color: 'white',
+                borderRadius: '50%',
+                padding: '2px 6px',
+                fontSize: '0.7em',
+                fontWeight: 'bold',
+              }}
+            >
+              {selectedItems.length}
+            </span>
+          )}
+        </FloatingCartButton>
+        <FloatingTextButton>
+          Fechar <br /> Pedido
+        </FloatingTextButton>
+      </div>
       {openPopup && (
         <BackdropStyle>
           <ModalStyle>

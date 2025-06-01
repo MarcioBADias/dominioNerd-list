@@ -71,7 +71,7 @@ export const ModalStyle = styled.div`
 
 export const FloatingCartButton = styled.button`
   position: fixed;
-  bottom: 30px;
+  bottom: 40px;
   right: 30px;
   background-color: #222;
   color: white;
@@ -89,5 +89,22 @@ export const FloatingCartButton = styled.button`
 
   &:hover {
     background-color: #333;
+  }
+`
+
+export const FloatingTextButton = styled.p`
+  position: fixed;
+  bottom: 10px;
+  right: 43px;
+  color: 222;
+  cursor: pointer;
+  font-weight: bold;
+  font-size: 10px;
+  z-index: 998;
+  transition: background-color 0.3s ease;
+  text-align: center;
+
+  &:hover {
+    color: #b83242;
   }
 `

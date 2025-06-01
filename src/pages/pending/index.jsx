@@ -1,17 +1,12 @@
-// Pending.jsx
-
 import { useEffect, useState } from 'react'
 import { supabase } from '../../services/supabase'
 import { Button, Card, Container } from './style'
 import { TiArrowBack } from 'react-icons/ti'
-// Importar ícones de seta para baixo/para cima
-import { IoIosArrowDown, IoIosArrowUp } from 'react-icons/io' // NOVO IMPORT
+import { IoIosArrowDown, IoIosArrowUp } from 'react-icons/io'
 
 const Pending = () => {
   const [pending, setPending] = useState([])
   const [finishedUsers, setFinishedUsers] = useState([])
-  // NOVO ESTADO: Um objeto para controlar a visibilidade de cada pedido agrupado
-  // A chave será o `compradorKey` e o valor será um booleano (true para expandido, false para colapsado)
   const [expandedOrders, setExpandedOrders] = useState({})
 
   useEffect(() => {
@@ -158,11 +153,10 @@ const Pending = () => {
     }
   }
 
-  // NOVA FUNÇÃO: Alterna a visibilidade dos detalhes do pedido
   const toggleOrderVisibility = (compradorKey) => {
     setExpandedOrders((prev) => ({
       ...prev,
-      [compradorKey]: !prev[compradorKey], // Inverte o valor booleano para a chave
+      [compradorKey]: !prev[compradorKey],
     }))
   }
 
@@ -197,7 +191,6 @@ const Pending = () => {
 
         const primeiroItemId = pedidos.length > 0 ? pedidos[0].id : 'N/A'
 
-        // Verifica se este pedido deve estar expandido
         const isExpanded = expandedOrders[compradorKey]
 
         return (
@@ -207,15 +200,13 @@ const Pending = () => {
                 display: 'flex',
                 justifyContent: 'space-between',
                 alignItems: 'center',
-                cursor: 'pointer', // Indica que o título é clicável
-                borderBottom: '3px solid #333', // Mantém a borda no título
-                paddingBottom: '10px', // Adiciona um padding para a borda
+                cursor: 'pointer',
+                borderBottom: '3px solid #333',
+                paddingBottom: '10px',
               }}
-              onClick={() => toggleOrderVisibility(compradorKey)} // Click para expandir/colapsar
+              onClick={() => toggleOrderVisibility(compradorKey)}
             >
               <h2 style={{ margin: 0 }}>
-                {' '}
-                {/* Remover margin do h2 para melhor alinhamento */}
                 Pedido de{' '}
                 <span style={{ color: '#b83242' }}>
                   {nomeCompradorExibicao.toUpperCase()} nº {primeiroItemId}{' '}
@@ -225,7 +216,6 @@ const Pending = () => {
                   ({dataHoraPedidoExibicao})
                 </small>{' '}
               </h2>
-              {/* Ícone de seta condicional */}
               {isExpanded ? (
                 <IoIosArrowUp size={30} color="#222" />
               ) : (
@@ -233,7 +223,6 @@ const Pending = () => {
               )}
             </div>
 
-            {/* Renderiza a lista de itens e botões SOMENTE SE expandido */}
             {isExpanded && (
               <>
                 <ul style={{ listStyle: 'none' }}>
@@ -241,8 +230,8 @@ const Pending = () => {
                     <li
                       key={pedido.id}
                       style={{
-                        borderBottom: '1px solid #eee', // Borda mais suave para os itens
-                        padding: '10px 0', // Padding para espaçamento
+                        borderBottom: '1px solid #eee',
+                        padding: '10px 0',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'space-between',
@@ -309,8 +298,6 @@ const Pending = () => {
                     marginTop: '20px',
                   }}
                 >
-                  {' '}
-                  {/* Alinha botões à direita */}
                   <Button
                     onClick={() => {
                       const confirmacao = window.confirm(
@@ -320,13 +307,13 @@ const Pending = () => {
                         devolverVenda(compradorKey)
                       }
                     }}
-                    style={{ background: '#dc3545', marginRight: '10px' }} // Estilo para Devolver Pedido
+                    style={{ background: '#dc3545', marginRight: '10px' }}
                   >
                     Devolver Pedido
                   </Button>
                   <Button
                     onClick={() => confirmarVenda(compradorKey, pedidos)}
-                    style={{ background: '#28a745' }} // Estilo para Confirmar Venda
+                    style={{ background: '#28a745' }}
                   >
                     Confirmar Venda
                   </Button>
