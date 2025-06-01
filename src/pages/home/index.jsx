@@ -1,3 +1,5 @@
+// Home.jsx
+
 import { useEffect, useState } from 'react'
 import { supabase } from '../../services/supabase'
 import { useItemContext } from '../../context/ItemReducer'
@@ -10,9 +12,11 @@ import {
   ItemInfo,
   ItemList,
   ModalStyle,
+  FloatingCartButton,
 } from './style'
 import { QuantitySelector } from '../../components/QuantitySelector'
 import { EditionSelector } from '../../components/EditionSelector'
+import { BsCartCheckFill } from 'react-icons/bs'
 
 const Home = ({ openPopup, onHandleSandOrders }) => {
   const { state, dispatch } = useItemContext()
@@ -195,6 +199,28 @@ const Home = ({ openPopup, onHandleSandOrders }) => {
             </Item>
           ))}
       </ItemList>
+
+      <FloatingCartButton onClick={onHandleSandOrders}>
+        <BsCartCheckFill size={30} color="white" />
+        {selectedItems.length > 0 && (
+          <span
+            style={{
+              position: 'absolute',
+              top: 5,
+              right: 5,
+              backgroundColor: '#b83242',
+              color: 'white',
+              borderRadius: '50%',
+              padding: '2px 6px',
+              fontSize: '0.7em',
+              fontWeight: 'bold',
+            }}
+          >
+            {selectedItems.length}
+          </span>
+        )}
+      </FloatingCartButton>
+
       {openPopup && (
         <BackdropStyle>
           <ModalStyle>

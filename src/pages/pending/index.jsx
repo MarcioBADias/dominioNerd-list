@@ -4,10 +4,15 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../../services/supabase'
 import { Button, Card, Container } from './style'
 import { TiArrowBack } from 'react-icons/ti'
+// Importar ícones de seta para baixo/para cima
+import { IoIosArrowDown, IoIosArrowUp } from 'react-icons/io' // NOVO IMPORT
 
 const Pending = () => {
   const [pending, setPending] = useState([])
   const [finishedUsers, setFinishedUsers] = useState([])
+  // NOVO ESTADO: Um objeto para controlar a visibilidade de cada pedido agrupado
+  // A chave será o `compradorKey` e o valor será um booleano (true para expandido, false para colapsado)
+  const [expandedOrders, setExpandedOrders] = useState({})
 
   useEffect(() => {
     const fetchPending = async () => {
@@ -153,6 +158,14 @@ const Pending = () => {
     }
   }
 
+  // NOVA FUNÇÃO: Alterna a visibilidade dos detalhes do pedido
+  const toggleOrderVisibility = (compradorKey) => {
+    setExpandedOrders((prev) => ({
+      ...prev,
+      [compradorKey]: !prev[compradorKey], // Inverte o valor booleano para a chave
+    }))
+  }
+
   const sortedPedidosAgrupados = [
     ...Object.entries(pedidosAgrupados).filter(
       ([compradorKey]) => !finishedUsers.includes(compradorKey),
@@ -182,105 +195,144 @@ const Pending = () => {
           compradorKey.indexOf('-') + 1,
         )
 
-        // Novo: Obtém o ID do primeiro item do pedido (se houver)
         const primeiroItemId = pedidos.length > 0 ? pedidos[0].id : 'N/A'
+
+        // Verifica se este pedido deve estar expandido
+        const isExpanded = expandedOrders[compradorKey]
 
         return (
           <Card key={compradorKey} style={styleFinalizado}>
-            <h2 style={{ borderBottom: '3px solid #333' }}>
-              Pedido de{' '}
-              <span style={{ color: '#b83242' }}>
-                {nomeCompradorExibicao.toUpperCase()} nº {primeiroItemId}{' '}
-                {/* Adicionado o ID aqui */}
-              </span>
-              <br />
-              <small style={{ fontSize: '0.7em', color: '#666' }}>
-                ({dataHoraPedidoExibicao})
-              </small>{' '}
-            </h2>
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                cursor: 'pointer', // Indica que o título é clicável
+                borderBottom: '3px solid #333', // Mantém a borda no título
+                paddingBottom: '10px', // Adiciona um padding para a borda
+              }}
+              onClick={() => toggleOrderVisibility(compradorKey)} // Click para expandir/colapsar
+            >
+              <h2 style={{ margin: 0 }}>
+                {' '}
+                {/* Remover margin do h2 para melhor alinhamento */}
+                Pedido de{' '}
+                <span style={{ color: '#b83242' }}>
+                  {nomeCompradorExibicao.toUpperCase()} nº {primeiroItemId}{' '}
+                </span>
+                <br />
+                <small style={{ fontSize: '0.7em', color: '#666' }}>
+                  ({dataHoraPedidoExibicao})
+                </small>{' '}
+              </h2>
+              {/* Ícone de seta condicional */}
+              {isExpanded ? (
+                <IoIosArrowUp size={30} color="#222" />
+              ) : (
+                <IoIosArrowDown size={30} color="#222" />
+              )}
+            </div>
 
-            <ul style={{ listStyle: 'none' }}>
-              {pedidos.map((pedido) => (
-                <li
-                  key={pedido.id}
+            {/* Renderiza a lista de itens e botões SOMENTE SE expandido */}
+            {isExpanded && (
+              <>
+                <ul style={{ listStyle: 'none' }}>
+                  {pedidos.map((pedido) => (
+                    <li
+                      key={pedido.id}
+                      style={{
+                        borderBottom: '1px solid #eee', // Borda mais suave para os itens
+                        padding: '10px 0', // Padding para espaçamento
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                      }}
+                    >
+                      <div>
+                        <p>
+                          <strong>Peça:</strong> {pedido.item_name}
+                        </p>
+                        <p>
+                          <strong>Qtd:</strong> {pedido.quantity}
+                        </p>
+                        <p>
+                          <strong>Preço unitário:</strong> R${' '}
+                          {pedido.price.toFixed(2)}
+                        </p>
+                        <p>
+                          <strong>Subtotal:</strong> R${' '}
+                          {(pedido.price * pedido.quantity).toFixed(2)}
+                        </p>
+                      </div>
+                      <div>
+                        <Button
+                          onClick={() =>
+                            devolverItemIndividualmente(
+                              pedido.id,
+                              pedido.item_id,
+                              pedido.quantity,
+                            )
+                          }
+                          style={{
+                            background: 'none',
+                            border: 'none',
+                            cursor: 'pointer',
+                            fontSize: '1.5em',
+                            color: '#b83242',
+                            marginLeft: '10px',
+                          }}
+                          title="Devolver este item"
+                        >
+                          <div
+                            style={{
+                              display: 'flex',
+                              flexDirection: 'column',
+                              alignItems: 'center',
+                            }}
+                          >
+                            <TiArrowBack />
+                            <span style={{ fontSize: 10 }}>
+                              Devolver à venda
+                            </span>{' '}
+                          </div>
+                        </Button>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+
+                <h4>Total do Pedido: R$ {totalPedido.toFixed(2)}</h4>
+                <div
                   style={{
-                    borderBottom: '1px solid #333',
                     display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
+                    justifyContent: 'flex-end',
+                    marginTop: '20px',
                   }}
                 >
-                  <div>
-                    <p>
-                      <strong>Peça:</strong> {pedido.item_name}
-                    </p>
-                    <p>
-                      <strong>Qtd:</strong> {pedido.quantity}
-                    </p>
-                    <p>
-                      <strong>Preço unitário:</strong> R${' '}
-                      {pedido.price.toFixed(2)}
-                    </p>
-                    <p>
-                      <strong>Subtotal:</strong> R${' '}
-                      {(pedido.price * pedido.quantity).toFixed(2)}
-                    </p>
-                  </div>
-                  <div>
-                    <Button
-                      onClick={() =>
-                        devolverItemIndividualmente(
-                          pedido.id,
-                          pedido.item_id,
-                          pedido.quantity,
-                        )
+                  {' '}
+                  {/* Alinha botões à direita */}
+                  <Button
+                    onClick={() => {
+                      const confirmacao = window.confirm(
+                        `Tem certeza que deseja devolver à venda o pedido de ${nomeCompradorExibicao} (${dataHoraPedidoExibicao})?`,
+                      )
+                      if (confirmacao) {
+                        devolverVenda(compradorKey)
                       }
-                      style={{
-                        background: 'none',
-                        border: 'none',
-                        cursor: 'pointer',
-                        fontSize: '1.5em',
-                        color: '#b83242',
-                        marginLeft: '10px',
-                      }}
-                      title="Devolver este item"
-                    >
-                      <div
-                        style={{
-                          display: 'flex',
-                          flexDirection: 'column',
-                          alignItems: 'center',
-                        }}
-                      >
-                        <TiArrowBack />
-                        <span style={{ fontSize: 10 }}>
-                          Devolver à venda
-                        </span>{' '}
-                      </div>
-                    </Button>
-                  </div>
-                </li>
-              ))}
-            </ul>
-
-            <h4>Total do Pedido: R$ {totalPedido.toFixed(2)}</h4>
-            <Button
-              onClick={() => {
-                const confirmacao = window.confirm(
-                  `Tem certeza que deseja devolver à venda o pedido de ${nomeCompradorExibicao} (${dataHoraPedidoExibicao})?`,
-                )
-                if (confirmacao) {
-                  devolverVenda(compradorKey)
-                }
-              }}
-            >
-              Devolver Pedido
-            </Button>
-
-            <Button onClick={() => confirmarVenda(compradorKey, pedidos)}>
-              {' '}
-              Confirmar Venda
-            </Button>
+                    }}
+                    style={{ background: '#dc3545', marginRight: '10px' }} // Estilo para Devolver Pedido
+                  >
+                    Devolver Pedido
+                  </Button>
+                  <Button
+                    onClick={() => confirmarVenda(compradorKey, pedidos)}
+                    style={{ background: '#28a745' }} // Estilo para Confirmar Venda
+                  >
+                    Confirmar Venda
+                  </Button>
+                </div>
+              </>
+            )}
           </Card>
         )
       })}

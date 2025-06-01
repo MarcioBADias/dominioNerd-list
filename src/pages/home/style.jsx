@@ -1,3 +1,5 @@
+// style.jsx (da Home)
+
 import styled from 'styled-components'
 
 export const Container = styled.div`
@@ -65,4 +67,27 @@ export const ModalStyle = styled.div`
   z-index: 1000;
   max-height: 90vh;
   overflow-y: auto;
+`
+
+export const FloatingCartButton = styled.button`
+  position: fixed;
+  bottom: 30px;
+  right: 30px;
+  background-color: #222;
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 60px;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  z-index: 998;
+  transition: background-color 0.3s ease;
+
+  &:hover {
+    background-color: #333;
+  }
 `

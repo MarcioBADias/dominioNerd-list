@@ -9,12 +9,12 @@ import {
   LogoutIcon,
   Logo,
 } from './style'
-import { BsCartCheckFill } from 'react-icons/bs'
 import { MdOutlineAddBusiness } from 'react-icons/md'
 import { RiListView } from 'react-icons/ri'
 import { FiLogOut } from 'react-icons/fi'
 
 const Header = ({ onCartClick }) => {
+  // onCartClick ainda será passado para Home
   const [userData, setUserData] = useState(null)
   const navigate = useNavigate()
 
@@ -76,14 +76,6 @@ const Header = ({ onCartClick }) => {
             </button>
           </>
         )}
-        <button onClick={onCartClick} style={{ position: 'relative' }}>
-          <div>
-            <BsCartCheckFill size={40} />
-          </div>
-          <div>
-            <p style={{ fontSize: 7 }}>Fechar pedido</p>
-          </div>
-        </button>
       </Nav>
 
       <UserInfo>
