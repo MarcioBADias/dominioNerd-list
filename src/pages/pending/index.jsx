@@ -239,7 +239,7 @@ const Pending = () => {
                     >
                       <div>
                         <p>
-                          <strong>Peça:</strong> {pedido.item_name}
+                          <strong>Peça:</strong> {pedido.edition} {pedido.serialNumber} {pedido.item_name}
                         </p>
                         <p>
                           <strong>Qtd:</strong> {pedido.quantity}
