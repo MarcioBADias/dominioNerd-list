@@ -11,13 +11,15 @@ const Pending = () => {
 
   useEffect(() => {
     const fetchPending = async () => {
+      // Modificação aqui: Usamos '*, itens(edition, serialNumber)' para buscar os dados de 'orders' e os campos 'edition' e 'serialNumber' da tabela 'itens'
       const { data, error } = await supabase
         .from('orders')
-        .select('*')
+        .select('*, itens(edition, serialNumber)') // <--- ALTERADO AQUI
         .eq('recall', false)
         .order('created_at', { ascending: true })
 
       if (!error) setPending(data)
+      else console.error('Erro ao buscar pedidos pendentes:', error) // Adicionado para melhor depuração
     }
 
     fetchPending()
@@ -239,7 +241,8 @@ const Pending = () => {
                     >
                       <div>
                         <p>
-                          <strong>Peça:</strong> {pedido.edition} {pedido.serialNumber} {pedido.item_name}
+                          {/* Modificação aqui: Acessamos os dados de 'itens' que vêm aninhados no objeto pedido */}
+                          <strong>Peça:</strong> {pedido.itens.edition} {pedido.itens.serialNumber} {pedido.item_name} {/* <--- ALTERADO AQUI */}
                         </p>
                         <p>
                           <strong>Qtd:</strong> {pedido.quantity}
