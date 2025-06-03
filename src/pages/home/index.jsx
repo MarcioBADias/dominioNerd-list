@@ -170,11 +170,10 @@ const Home = ({ openPopup, onHandleSandOrders }) => {
             (item) => !selectedEdition || item.edition === selectedEdition,
           )
           .map((item) => (
-            <Item key={item.id}>
+            <Item key={item.id} onClick={() => toggleSelect(item.id)}>
               <Check
                 type="checkbox"
                 checked={selectedItems.includes(item.id)}
-                onChange={() => toggleSelect(item.id)}
               />
               <ItemInfo>
                 <div>
