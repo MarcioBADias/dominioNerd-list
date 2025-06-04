@@ -6,25 +6,28 @@ import { IoIosArrowDown, IoIosArrowUp } from 'react-icons/io'
 
 const Pending = () => {
   const [pending, setPending] = useState([])
-  const [finishedUsers, setFinishedUsers] = useState([])
+  // O estado finishedUsers não será mais necessário, pois o status será persistido no DB
+  // const [finishedUsers, setFinishedUsers] = useState([])
   const [expandedOrders, setExpandedOrders] = useState({})
 
   useEffect(() => {
     const fetchPending = async () => {
-      // Modificação aqui: Usamos '*, itens(edition, serialNumber)' para buscar os dados de 'orders' e os campos 'edition' e 'serialNumber' da tabela 'itens'
+      // Modificação aqui: Buscamos apenas os pedidos que NÃO ESTÃO CONFIRMADOS E NÃO FORAM RECALL
       const { data, error } = await supabase
         .from('orders')
-        .select('*, itens(edition, serialNumber)') // <--- ALTERADO AQUI
+        .select('*, itens(edition, serialNumber)')
         .eq('recall', false)
+        .eq('is_confirmed', false) // <--- ADICIONADO AQUI: Filtra por pedidos não confirmados
         .order('created_at', { ascending: true })
 
       if (!error) setPending(data)
-      else console.error('Erro ao buscar pedidos pendentes:', error) // Adicionado para melhor depuração
+      else console.error('Erro ao buscar pedidos pendentes:', error)
     }
 
     fetchPending()
-  }, [])
+  }, []) // O array de dependências está vazio, então roda apenas uma vez no montagem
 
+  // Função para agrupar pedidos, permanece praticamente a mesma
   const agruparPorComprador = () => {
     const agrupado = {}
 
@@ -44,10 +47,27 @@ const Pending = () => {
 
   const pedidosAgrupados = agruparPorComprador()
 
-  const confirmarVenda = (compradorKey, pedidos) => {
+  // Função `confirmarVenda` agora atualiza o banco de dados
+  const confirmarVenda = async (compradorKey, pedidos) => {
+    // <--- Adicionado `async`
     const nomeCompradorReal = compradorKey.split('-')[0]
 
-    setFinishedUsers((prev) => [...prev, compradorKey])
+    // Não precisamos mais do setFinishedUsers aqui
+    // setFinishedUsers((prev) => [...prev, compradorKey])
+
+    // --- Nova lógica: Atualizar o status no banco de dados ---
+    const idsDosPedidosDoGrupo = pedidos.map((p) => p.id)
+    const { error: updateError } = await supabase
+      .from('orders')
+      .update({ is_confirmed: true }) // <--- Define is_confirmed como true
+      .in('id', idsDosPedidosDoGrupo) // <--- Atualiza todos os pedidos neste grupo
+
+    if (updateError) {
+      console.error('Erro ao confirmar venda no banco de dados:', updateError)
+      return // Interrompe a função se houver erro
+    }
+    // --------------------------------------------------------
+
     const totalPedido = pedidos.reduce(
       (acc, item) => acc + item.price * item.quantity,
       0,
@@ -66,6 +86,12 @@ const Pending = () => {
     const telefone = `55${pedidos[0]?.contact?.replace(/\D/g, '')}`
     const url = `https://wa.me/${telefone}?text=${encodeURIComponent(mensagem)}`
     window.open(url, '_blank')
+
+    // Após confirmar, recarrega os dados para remover o pedido da lista
+    // ou remove-o do estado local para uma atualização mais rápida
+    setPending((prevPending) =>
+      prevPending.filter((pedido) => !idsDosPedidosDoGrupo.includes(pedido.id)),
+    )
   }
 
   const devolverVenda = async (compradorKey) => {
@@ -92,10 +118,14 @@ const Pending = () => {
         .eq('id', pedido.item_id)
     }
 
+    // Marca como recall e desconfirma (se houver essa lógica)
     const ids = pedidosUsuario.map((p) => p.id)
-    await supabase.from('orders').update({ recall: true }).in('id', ids)
+    await supabase
+      .from('orders')
+      .update({ recall: true, is_confirmed: false })
+      .in('id', ids) // <--- Adicionado is_confirmed: false
 
-    window.location.reload()
+    window.location.reload() // Recarrega para refletir as mudanças
   }
 
   const devolverItemIndividualmente = async (
@@ -135,9 +165,10 @@ const Pending = () => {
         return
       }
 
+      // Marca o pedido como recalled e desconfirma se necessário
       const { error: updateOrderError } = await supabase
         .from('orders')
-        .update({ recall: true })
+        .update({ recall: true, is_confirmed: false }) // <--- Adicionado is_confirmed: false
         .eq('id', pedidoId)
 
       if (updateOrderError) {
@@ -162,172 +193,177 @@ const Pending = () => {
     }))
   }
 
-  const sortedPedidosAgrupados = [
-    ...Object.entries(pedidosAgrupados).filter(
-      ([compradorKey]) => !finishedUsers.includes(compradorKey),
-    ),
-    ...Object.entries(pedidosAgrupados).filter(([compradorKey]) =>
-      finishedUsers.includes(compradorKey),
-    ),
-  ]
+  // Não precisamos mais filtrar por finishedUsers, pois o filtro já vem do DB
+  // Vamos apenas agrupar e exibir o que veio do 'pending'
+  const sortedPedidosAgrupados = Object.entries(pedidosAgrupados)
 
   return (
     <Container>
       <h1>Pedidos Pendentes</h1>
 
-      {sortedPedidosAgrupados.map(([compradorKey, pedidos]) => {
-        const totalPedido = pedidos.reduce(
-          (acc, item) => acc + item.price * item.quantity,
-          0,
-        )
+      {sortedPedidosAgrupados.length === 0 ? (
+        <p>Não há pedidos pendentes no momento.</p>
+      ) : (
+        sortedPedidosAgrupados.map(([compradorKey, pedidos]) => {
+          const totalPedido = pedidos.reduce(
+            (acc, item) => acc + item.price * item.quantity,
+            0,
+          )
 
-        const isFinished = finishedUsers.includes(compradorKey)
-        const styleFinalizado = isFinished
-          ? { opacity: 0.4, filter: 'grayscale(100%)' }
-          : {}
+          // O status is_confirmed virá agora de dentro do próprio objeto pedido
+          // Assumimos que todos os pedidos em um grupo terão o mesmo is_confirmed
+          const isConfirmed = pedidos[0]?.is_confirmed // <--- AGORA LIDO DO DADO DO PEDIDO
 
-        const nomeCompradorExibicao = compradorKey.split('-')[0]
-        const dataHoraPedidoExibicao = compradorKey.substring(
-          compradorKey.indexOf('-') + 1,
-        )
+          // O estilo de "finalizado" será aplicado se for is_confirmed
+          const styleFinalizado = isConfirmed
+            ? { opacity: 0.4, filter: 'grayscale(100%)' }
+            : {}
 
-        const primeiroItemId = pedidos.length > 0 ? pedidos[0].id : 'N/A'
+          const nomeCompradorExibicao = compradorKey.split('-')[0]
+          const dataHoraPedidoExibicao = compradorKey.substring(
+            compradorKey.indexOf('-') + 1,
+          )
 
-        const isExpanded = expandedOrders[compradorKey]
+          const primeiroItemId = pedidos.length > 0 ? pedidos[0].id : 'N/A'
 
-        return (
-          <Card key={compradorKey} style={styleFinalizado}>
-            <div
-              style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                cursor: 'pointer',
-                borderBottom: '3px solid #333',
-                paddingBottom: '10px',
-              }}
-              onClick={() => toggleOrderVisibility(compradorKey)}
-            >
-              <h2 style={{ margin: 0 }}>
-                Pedido de{' '}
-                <span style={{ color: '#b83242' }}>
-                  {nomeCompradorExibicao.toUpperCase()} nº {primeiroItemId}{' '}
-                </span>
-                <br />
-                <small style={{ fontSize: '0.7em', color: '#666' }}>
-                  ({dataHoraPedidoExibicao})
-                </small>{' '}
-              </h2>
-              {isExpanded ? (
-                <IoIosArrowUp size={30} color="#222" />
-              ) : (
-                <IoIosArrowDown size={30} color="#222" />
-              )}
-            </div>
+          const isExpanded = expandedOrders[compradorKey]
 
-            {isExpanded && (
-              <>
-                <ul style={{ listStyle: 'none' }}>
-                  {pedidos.map((pedido) => (
-                    <li
-                      key={pedido.id}
-                      style={{
-                        borderBottom: '1px solid #eee',
-                        padding: '10px 0',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                      }}
-                    >
-                      <div>
-                        <p>
-                          {/* Modificação aqui: Acessamos os dados de 'itens' que vêm aninhados no objeto pedido */}
-                          <strong>Peça:</strong> {pedido.itens.edition}{' '}
-                          {pedido.itens.serialNumber} {pedido.item_name}{' '}
-                          {/* <--- ALTERADO AQUI */}
-                        </p>
-                        <p>
-                          <strong>Qtd:</strong> {pedido.quantity}
-                        </p>
-                        <p>
-                          <strong>Preço unitário:</strong> R${' '}
-                          {pedido.price.toFixed(2)}
-                        </p>
-                        <p>
-                          <strong>Subtotal:</strong> R${' '}
-                          {(pedido.price * pedido.quantity).toFixed(2)}
-                        </p>
-                      </div>
-                      <div>
-                        <Button
-                          onClick={() =>
-                            devolverItemIndividualmente(
-                              pedido.id,
-                              pedido.item_id,
-                              pedido.quantity,
-                            )
-                          }
-                          style={{
-                            background: 'none',
-                            border: 'none',
-                            cursor: 'pointer',
-                            fontSize: '1.5em',
-                            color: '#b83242',
-                            marginLeft: '10px',
-                          }}
-                          title="Devolver este item"
-                        >
-                          <div
+          return (
+            <Card key={compradorKey} style={styleFinalizado}>
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  cursor: 'pointer',
+                  borderBottom: '3px solid #333',
+                  paddingBottom: '10px',
+                }}
+                onClick={() => toggleOrderVisibility(compradorKey)}
+              >
+                <h2 style={{ margin: 0 }}>
+                  Pedido de{' '}
+                  <span style={{ color: '#b83242' }}>
+                    {nomeCompradorExibicao.toUpperCase()} nº{' '}
+                    {primeiroItemId}{' '}
+                  </span>
+                  <br />
+                  <small style={{ fontSize: '0.7em', color: '#666' }}>
+                    ({dataHoraPedidoExibicao})
+                  </small>{' '}
+                </h2>
+                {isExpanded ? (
+                  <IoIosArrowUp size={30} color="#222" />
+                ) : (
+                  <IoIosArrowDown size={30} color="#222" />
+                )}
+              </div>
+
+              {isExpanded && (
+                <>
+                  <ul style={{ listStyle: 'none' }}>
+                    {pedidos.map((pedido) => (
+                      <li
+                        key={pedido.id}
+                        style={{
+                          borderBottom: '1px solid #eee',
+                          padding: '10px 0',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                        }}
+                      >
+                        <div>
+                          <p>
+                            <strong>Peça:</strong> {pedido.itens.edition}{' '}
+                            {pedido.itens.serialNumber} {pedido.item_name}{' '}
+                          </p>
+                          <p>
+                            <strong>Qtd:</strong> {pedido.quantity}
+                          </p>
+                          <p>
+                            <strong>Preço unitário:</strong> R${' '}
+                            {pedido.price.toFixed(2)}
+                          </p>
+                          <p>
+                            <strong>Subtotal:</strong> R${' '}
+                            {(pedido.price * pedido.quantity).toFixed(2)}
+                          </p>
+                        </div>
+                        <div>
+                          <Button
+                            onClick={() =>
+                              devolverItemIndividualmente(
+                                pedido.id,
+                                pedido.item_id,
+                                pedido.quantity,
+                              )
+                            }
                             style={{
-                              display: 'flex',
-                              flexDirection: 'column',
-                              alignItems: 'center',
+                              background: 'none',
+                              border: 'none',
+                              cursor: 'pointer',
+                              fontSize: '1.5em',
+                              color: '#b83242',
+                              marginLeft: '10px',
                             }}
+                            title="Devolver este item"
+                            disabled={isConfirmed} // <--- Desabilita se o pedido for confirmado
                           >
-                            <TiArrowBack />
-                            <span style={{ fontSize: 10 }}>
-                              Devolver à venda
-                            </span>{' '}
-                          </div>
-                        </Button>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
+                            <div
+                              style={{
+                                display: 'flex',
+                                flexDirection: 'column',
+                                alignItems: 'center',
+                              }}
+                            >
+                              <TiArrowBack />
+                              <span style={{ fontSize: 10 }}>
+                                Devolver à venda
+                              </span>{' '}
+                            </div>
+                          </Button>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
 
-                <h4>Total do Pedido: R$ {totalPedido.toFixed(2)}</h4>
-                <div
-                  style={{
-                    display: 'flex',
-                    justifyContent: 'flex-end',
-                    marginTop: '20px',
-                  }}
-                >
-                  <Button
-                    onClick={() => {
-                      const confirmacao = window.confirm(
-                        `Tem certeza que deseja devolver à venda o pedido de ${nomeCompradorExibicao} (${dataHoraPedidoExibicao})?`,
-                      )
-                      if (confirmacao) {
-                        devolverVenda(compradorKey)
-                      }
+                  <h4>Total do Pedido: R$ {totalPedido.toFixed(2)}</h4>
+                  <div
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'flex-end',
+                      marginTop: '20px',
                     }}
-                    style={{ background: '#dc3545', marginRight: '10px' }}
                   >
-                    Devolver Pedido
-                  </Button>
-                  <Button
-                    onClick={() => confirmarVenda(compradorKey, pedidos)}
-                    style={{ background: '#28a745' }}
-                  >
-                    Confirmar Venda
-                  </Button>
-                </div>
-              </>
-            )}
-          </Card>
-        )
-      })}
+                    <Button
+                      onClick={() => {
+                        const confirmacao = window.confirm(
+                          `Tem certeza que deseja devolver à venda o pedido de ${nomeCompradorExibicao} (${dataHoraPedidoExibicao})?`,
+                        )
+                        if (confirmacao) {
+                          devolverVenda(compradorKey)
+                        }
+                      }}
+                      style={{ background: '#dc3545', marginRight: '10px' }}
+                      disabled={isConfirmed} // <--- Desabilita se o pedido for confirmado
+                    >
+                      Devolver Pedido
+                    </Button>
+                    <Button
+                      onClick={() => confirmarVenda(compradorKey, pedidos)}
+                      style={{ background: '#28a745' }}
+                      disabled={isConfirmed} // <--- Desabilita se o pedido for confirmado
+                    >
+                      Confirmar Venda
+                    </Button>
+                  </div>
+                </>
+              )}
+            </Card>
+          )
+        })
+      )}
     </Container>
   )
 }
