@@ -6,18 +6,14 @@ import { IoIosArrowDown, IoIosArrowUp } from 'react-icons/io'
 
 const Pending = () => {
   const [pending, setPending] = useState([])
-  // O estado finishedUsers não será mais necessário, pois o status será persistido no DB
-  // const [finishedUsers, setFinishedUsers] = useState([])
   const [expandedOrders, setExpandedOrders] = useState({})
 
   useEffect(() => {
     const fetchPending = async () => {
-      // Modificação aqui: Buscamos apenas os pedidos que NÃO ESTÃO CONFIRMADOS E NÃO FORAM RECALL
       const { data, error } = await supabase
         .from('orders')
         .select('*, itens(edition, serialNumber)')
         .eq('recall', false)
-        .eq('is_confirmed', false) // <--- ADICIONADO AQUI: Filtra por pedidos não confirmados
         .order('created_at', { ascending: true })
 
       if (!error) setPending(data)
@@ -25,9 +21,8 @@ const Pending = () => {
     }
 
     fetchPending()
-  }, []) // O array de dependências está vazio, então roda apenas uma vez no montagem
+  }, [])
 
-  // Função para agrupar pedidos, permanece praticamente a mesma
   const agruparPorComprador = () => {
     const agrupado = {}
 
@@ -47,26 +42,29 @@ const Pending = () => {
 
   const pedidosAgrupados = agruparPorComprador()
 
-  // Função `confirmarVenda` agora atualiza o banco de dados
   const confirmarVenda = async (compradorKey, pedidos) => {
-    // <--- Adicionado `async`
     const nomeCompradorReal = compradorKey.split('-')[0]
 
-    // Não precisamos mais do setFinishedUsers aqui
-    // setFinishedUsers((prev) => [...prev, compradorKey])
-
-    // --- Nova lógica: Atualizar o status no banco de dados ---
     const idsDosPedidosDoGrupo = pedidos.map((p) => p.id)
+
     const { error: updateError } = await supabase
       .from('orders')
-      .update({ is_confirmed: true }) // <--- Define is_confirmed como true
-      .in('id', idsDosPedidosDoGrupo) // <--- Atualiza todos os pedidos neste grupo
+      .update({ is_confirmed: true })
+      .in('id', idsDosPedidosDoGrupo)
 
     if (updateError) {
       console.error('Erro ao confirmar venda no banco de dados:', updateError)
-      return // Interrompe a função se houver erro
+      return
     }
-    // --------------------------------------------------------
+
+    setPending((prevPending) =>
+      prevPending.map((pedido) => {
+        if (idsDosPedidosDoGrupo.includes(pedido.id)) {
+          return { ...pedido, is_confirmed: true }
+        }
+        return pedido
+      }),
+    )
 
     const totalPedido = pedidos.reduce(
       (acc, item) => acc + item.price * item.quantity,
@@ -86,12 +84,6 @@ const Pending = () => {
     const telefone = `55${pedidos[0]?.contact?.replace(/\D/g, '')}`
     const url = `https://wa.me/${telefone}?text=${encodeURIComponent(mensagem)}`
     window.open(url, '_blank')
-
-    // Após confirmar, recarrega os dados para remover o pedido da lista
-    // ou remove-o do estado local para uma atualização mais rápida
-    setPending((prevPending) =>
-      prevPending.filter((pedido) => !idsDosPedidosDoGrupo.includes(pedido.id)),
-    )
   }
 
   const devolverVenda = async (compradorKey) => {
@@ -118,14 +110,15 @@ const Pending = () => {
         .eq('id', pedido.item_id)
     }
 
-    // Marca como recall e desconfirma (se houver essa lógica)
     const ids = pedidosUsuario.map((p) => p.id)
     await supabase
       .from('orders')
       .update({ recall: true, is_confirmed: false })
-      .in('id', ids) // <--- Adicionado is_confirmed: false
+      .in('id', ids)
 
-    window.location.reload() // Recarrega para refletir as mudanças
+    setPending((prevPending) =>
+      prevPending.filter((pedido) => !ids.includes(pedido.id)),
+    )
   }
 
   const devolverItemIndividualmente = async (
@@ -165,10 +158,9 @@ const Pending = () => {
         return
       }
 
-      // Marca o pedido como recalled e desconfirma se necessário
       const { error: updateOrderError } = await supabase
         .from('orders')
-        .update({ recall: true, is_confirmed: false }) // <--- Adicionado is_confirmed: false
+        .update({ recall: true, is_confirmed: false })
         .eq('id', pedidoId)
 
       if (updateOrderError) {
@@ -193,16 +185,23 @@ const Pending = () => {
     }))
   }
 
-  // Não precisamos mais filtrar por finishedUsers, pois o filtro já vem do DB
-  // Vamos apenas agrupar e exibir o que veio do 'pending'
-  const sortedPedidosAgrupados = Object.entries(pedidosAgrupados)
+  const sortedPedidosAgrupados = Object.entries(pedidosAgrupados).sort(
+    ([_, aPedidos], [__, bPedidos]) => {
+      const aIsConfirmed = aPedidos[0]?.is_confirmed || false
+      const bIsConfirmed = bPedidos[0]?.is_confirmed || false
+
+      if (!aIsConfirmed && bIsConfirmed) return -1
+      if (aIsConfirmed && !bIsConfirmed) return 1
+      return 0
+    },
+  )
 
   return (
     <Container>
       <h1>Pedidos Pendentes</h1>
 
       {sortedPedidosAgrupados.length === 0 ? (
-        <p>Não há pedidos pendentes no momento.</p>
+        <p>Não há pedidos pendentes ou confirmados para exibir no momento.</p>
       ) : (
         sortedPedidosAgrupados.map(([compradorKey, pedidos]) => {
           const totalPedido = pedidos.reduce(
@@ -210,11 +209,8 @@ const Pending = () => {
             0,
           )
 
-          // O status is_confirmed virá agora de dentro do próprio objeto pedido
-          // Assumimos que todos os pedidos em um grupo terão o mesmo is_confirmed
-          const isConfirmed = pedidos[0]?.is_confirmed // <--- AGORA LIDO DO DADO DO PEDIDO
+          const isConfirmed = pedidos[0]?.is_confirmed || false
 
-          // O estilo de "finalizado" será aplicado se for is_confirmed
           const styleFinalizado = isConfirmed
             ? { opacity: 0.4, filter: 'grayscale(100%)' }
             : {}
@@ -308,7 +304,7 @@ const Pending = () => {
                               marginLeft: '10px',
                             }}
                             title="Devolver este item"
-                            disabled={isConfirmed} // <--- Desabilita se o pedido for confirmado
+                            disabled={isConfirmed}
                           >
                             <div
                               style={{
@@ -346,14 +342,14 @@ const Pending = () => {
                         }
                       }}
                       style={{ background: '#dc3545', marginRight: '10px' }}
-                      disabled={isConfirmed} // <--- Desabilita se o pedido for confirmado
+                      disabled={isConfirmed}
                     >
                       Devolver Pedido
                     </Button>
                     <Button
                       onClick={() => confirmarVenda(compradorKey, pedidos)}
                       style={{ background: '#28a745' }}
-                      disabled={isConfirmed} // <--- Desabilita se o pedido for confirmado
+                      disabled={isConfirmed}
                     >
                       Confirmar Venda
                     </Button>
