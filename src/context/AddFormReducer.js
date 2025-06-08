@@ -1,4 +1,4 @@
-export const initialAddFormState = {
+const initialAddFormState = {
   name: '',
   edition: '',
   serialNumber: '',
@@ -9,7 +9,7 @@ export const initialAddFormState = {
   successMessage: '',
 }
 
-export const addFormActionTypes = {
+const addFormActionTypes = {
   SET_FIELD: 'SET_FIELD',
   SUBMIT_START: 'SUBMIT_START',
   SUBMIT_SUCCESS: 'SUBMIT_SUCCESS',
@@ -17,7 +17,7 @@ export const addFormActionTypes = {
   RESET_FORM: 'RESET_FORM',
 }
 
-export const addFormReducer = (state, action) => {
+const addFormReducer = (state, action) => {
   if (action.type === addFormActionTypes.SET_FIELD) {
     return {
       ...state,
@@ -49,3 +49,5 @@ export const addFormReducer = (state, action) => {
     return { ...initialAddFormState }
   }
 }
+
+export { initialAddFormState, addFormActionTypes, addFormReducer }
