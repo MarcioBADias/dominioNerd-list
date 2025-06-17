@@ -41,3 +41,18 @@ export const ToggleText = styled.p`
   cursor: pointer;
   text-decoration: underline;
 `
+export const LogoImage = styled.img`
+  width: 150px;
+  margin-bottom: 1rem;
+`
+
+export const ErrorMessage = styled.p`
+  color: red;
+  background-color: #ffe6e6;
+  border: 1px solid red;
+  padding: 10px;
+  border-radius: 5px;
+  margin-top: 1rem;
+  margin-bottom: 0.5rem;
+  text-align: center;
+`

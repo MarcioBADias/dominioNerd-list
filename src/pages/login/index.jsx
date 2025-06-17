@@ -1,4 +1,4 @@
-import { useReducer } from 'react'
+import { useReducer, useEffect } from 'react'
 import { supabase } from '../../services/supabase'
 import { useNavigate } from 'react-router-dom'
 import {
@@ -8,179 +8,241 @@ import {
   Button,
   ToggleText,
   Label,
-  Logo,
+  LogoImage,
+  ErrorMessage,
 } from './style'
 import { authReducer, initialState } from '../../context/AuthReducer'
 
-const Login = () => {
+const AUTH_ACTION_TYPES = {
+  SET_FIELD: 'SET_FIELD',
+  TOGGLE_MODE: 'TOGGLE_MODE',
+  SET_LOADING: 'SET_LOADING',
+  SET_ERROR: 'SET_ERROR',
+  TOGGLE_AVATAR_INPUT: 'TOGGLE_AVATAR_INPUT',
+  RESET_ERROR: 'RESET_ERROR',
+}
+
+export const LoginPage = () => {
   const [state, dispatch] = useReducer(authReducer, initialState)
   const navigate = useNavigate()
 
-  const handleSubmit = async (e) => {
+  useEffect(() => {
+    localStorage.removeItem('user')
+  }, [])
+
+  const handleFormSubmit = async (e) => {
     e.preventDefault()
-    dispatch({ type: 'SET_LOADING', value: true })
+    dispatch({ type: AUTH_ACTION_TYPES.SET_LOADING, value: true })
+    dispatch({ type: AUTH_ACTION_TYPES.SET_ERROR, value: null })
 
     const { name, email, password, isLogin, profile, phone } = state
 
     try {
       if (isLogin) {
-        const { data, error } = await supabase
-          .from('users')
-          .select('*')
-          .eq('email', email)
-          .eq('password', password)
-          .single()
+        const { data: loginData, error: loginError } =
+          await supabase.auth.signInWithPassword({
+            email: email,
+            password: password,
+          })
 
-        if (error || !data) {
-          dispatch({ type: 'SET_ERROR', value: 'Email ou password inválidos' })
+        if (loginError) {
+          dispatch({
+            type: AUTH_ACTION_TYPES.SET_ERROR,
+            value: loginError.message || 'Invalid email or password.',
+          })
+        } else if (loginData.user) {
+          const { data: userProfile, error: profileError } = await supabase
+            .from('users')
+            .select('*')
+            .eq('id', loginData.user.id)
+            .single()
+
+          if (profileError || !userProfile) {
+            dispatch({
+              type: AUTH_ACTION_TYPES.SET_ERROR,
+              value:
+                'Login successful but profile not found. Please contact support.',
+            })
+          } else {
+            localStorage.setItem('user', JSON.stringify(userProfile))
+            navigate('/')
+          }
         } else {
-          localStorage.setItem('user', JSON.stringify(data))
-          navigate('/')
+          dispatch({
+            type: AUTH_ACTION_TYPES.SET_ERROR,
+            value: 'Login failed. Please try again.',
+          })
         }
       } else {
-        let profileUrl = ''
+        const { data: signUpData, error: signUpError } =
+          await supabase.auth.signUp({
+            email: email,
+            password: password,
+            options: {
+              data: {
+                name: name,
+                phone: phone,
+              },
+            },
+          })
 
-        if (profile) {
-          const fileName = `${Date.now()}_${profile.name}`
-          const filePath = `avatars/${fileName}`
+        if (signUpError) {
+          dispatch({
+            type: AUTH_ACTION_TYPES.SET_ERROR,
+            value: signUpError.message,
+          })
+        } else if (signUpData.user) {
+          let profileStoragePublicUrl = ''
+          if (profile) {
+            const fileExtension = profile.name.split('.').pop()
+            const newFileName = `${signUpData.user.id}.${fileExtension}`
+            const filePath = `avatars/${newFileName}`
 
-          const { data: uploadData, error: uploadError } =
-            await supabase.storage.from('profile').upload(filePath, profile, {
-              contentType: profile.type || 'image/jpeg',
-              upsert: false,
+            const { data: uploadData, error: uploadError } =
+              await supabase.storage.from('profile').upload(filePath, profile, {
+                cacheControl: '3600',
+                upsert: true,
+                contentType: profile.type || 'image/jpeg',
+              })
+
+            if (uploadError) {
+              console.error('Avatar upload error:', uploadError)
+            } else {
+              const { data: publicUrlData } = supabase.storage
+                .from('profile')
+                .getPublicUrl(filePath)
+              profileStoragePublicUrl = publicUrlData.publicUrl
+            }
+          }
+
+          const { error: insertProfileError } = await supabase
+            .from('users')
+            .insert({
+              id: signUpData.user.id,
+              name: name,
+              email: email,
+              phone: phone,
+              profile: profileStoragePublicUrl,
+              adm: false,
             })
 
-          if (uploadError) throw uploadError
-
-          const {
-            data: { publicUrl },
-          } = supabase.storage.from('profile').getPublicUrl(filePath)
-
-          profileUrl = publicUrl
-        }
-
-        const { error: insertError } = await supabase.from('users').insert({
-          name,
-          email,
-          password,
-          phone,
-          profile: profileUrl,
-          adm: false,
-        })
-
-        if (insertError) {
-          dispatch({ type: 'SET_ERROR', value: insertError.message })
+          if (insertProfileError) {
+            console.error(
+              'Error inserting user profile data:',
+              insertProfileError,
+            )
+            dispatch({
+              type: AUTH_ACTION_TYPES.SET_ERROR,
+              value: `Account created, but profile setup failed: ${insertProfileError.message}`,
+            })
+          } else {
+            alert(
+              'Signup successful! Please check your email for a confirmation link if email confirmation is enabled.',
+            )
+            dispatch({ type: AUTH_ACTION_TYPES.TOGGLE_MODE })
+          }
         } else {
-          navigate('/')
+          dispatch({
+            type: AUTH_ACTION_TYPES.SET_ERROR,
+            value: 'Signup failed. Please try again.',
+          })
         }
       }
     } catch (err) {
-      console.error('Erro no cadastro:', err)
-      dispatch({ type: 'SET_ERROR', value: err.message || 'Erro inesperado' })
+      console.error('Authentication error:', err)
+      dispatch({
+        type: AUTH_ACTION_TYPES.SET_ERROR,
+        value: err.message || 'An unexpected error occurred.',
+      })
     } finally {
-      dispatch({ type: 'SET_LOADING', value: false })
+      dispatch({ type: AUTH_ACTION_TYPES.SET_LOADING, value: false })
+    }
+  }
+
+  const handleInputChange = (field, value) => {
+    dispatch({ type: AUTH_ACTION_TYPES.SET_FIELD, field, value })
+    if (state.error) {
+      dispatch({ type: AUTH_ACTION_TYPES.RESET_ERROR })
     }
   }
 
   return (
     <Container>
-      <Logo src="/Logo_DominioNerd_Black.png" />
-      <h1>{state.isLogin ? 'Login' : 'Cadastro'}</h1>
-      <Form onSubmit={handleSubmit}>
+      <LogoImage src="/Logo_DominioNerd_Black.png" alt="Dominio Nerd Logo" />
+      <h1>{state.isLogin ? 'Login' : 'Sign Up'}</h1>
+      <Form onSubmit={handleFormSubmit}>
         {!state.isLogin && (
           <>
-            <Label>Nome de usuario</Label>
+            <Label htmlFor="name-input">Username</Label>
             <Input
+              id="name-input"
               type="text"
               value={state.name}
-              onChange={(e) =>
-                dispatch({
-                  type: 'SET_FIELD',
-                  field: 'name',
-                  value: e.target.value,
-                })
-              }
+              onChange={(e) => handleInputChange('name', e.target.value)}
             />
-            <Label>Telefone para whatsapp</Label>
+            <Label htmlFor="phone-input">Phone for WhatsApp</Label>
             <Input
-              type="text"
+              id="phone-input"
+              type="tel"
               value={state.phone}
-              onChange={(e) =>
-                dispatch({
-                  type: 'SET_FIELD',
-                  field: 'phone',
-                  value: e.target.value,
-                })
-              }
+              onChange={(e) => handleInputChange('phone', e.target.value)}
             />
-            <Label>Imagem de avatar</Label>
+            <Label htmlFor="avatar-input">Avatar Image</Label>
             {!state.showAvatarInput ? (
               <ToggleText
-                onClick={() => dispatch({ type: 'TOGGLE_AVATAR_INPUT' })}
+                onClick={() =>
+                  dispatch({ type: AUTH_ACTION_TYPES.TOGGLE_AVATAR_INPUT })
+                }
               >
-                Deseja criar um avatar?
+                Want to add an avatar?
               </ToggleText>
             ) : (
               <>
                 <Input
+                  id="avatar-input"
                   type="file"
+                  accept="image/*"
                   onChange={(e) =>
-                    dispatch({
-                      type: 'SET_FIELD',
-                      field: 'profile',
-                      value: e.target.files[0],
-                    })
+                    handleInputChange('profile', e.target.files[0])
                   }
                 />
                 <ToggleText
-                  onClick={() => dispatch({ type: 'TOGGLE_AVATAR_INPUT' })}
+                  onClick={() =>
+                    dispatch({ type: AUTH_ACTION_TYPES.TOGGLE_AVATAR_INPUT })
+                  }
                 >
-                  Cancelar avatar
+                  Cancel Avatar
                 </ToggleText>
               </>
             )}
           </>
         )}
-        <Label>Email</Label>
+        <Label htmlFor="email-input">Email</Label>
         <Input
+          id="email-input"
           type="email"
           value={state.email}
-          onChange={(e) =>
-            dispatch({
-              type: 'SET_FIELD',
-              field: 'email',
-              value: e.target.value,
-            })
-          }
+          onChange={(e) => handleInputChange('email', e.target.value)}
         />
-        <Label>password</Label>
+        <Label htmlFor="password-input">Password</Label>
         <Input
+          id="password-input"
           type="password"
           value={state.password}
-          onChange={(e) =>
-            dispatch({
-              type: 'SET_FIELD',
-              field: 'password',
-              value: e.target.value,
-            })
-          }
+          onChange={(e) => handleInputChange('password', e.target.value)}
         />
-        {state.error && <p style={{ color: 'red' }}>{state.error}</p>}
+        {state.error && <ErrorMessage>{state.error}</ErrorMessage>}
         <Button type="submit" disabled={state.loading}>
-          {state.loading
-            ? 'Carregando...'
-            : state.isLogin
-              ? 'Entrar'
-              : 'Cadastrar'}
+          {state.loading ? 'Loading...' : state.isLogin ? 'Login' : 'Sign Up'}
         </Button>
       </Form>
-      <ToggleText onClick={() => dispatch({ type: 'TOGGLE_MODE' })}>
+      <ToggleText
+        onClick={() => dispatch({ type: AUTH_ACTION_TYPES.TOGGLE_MODE })}
+      >
         {state.isLogin
-          ? 'Ainda não tem conta? Cadastre-se aqui'
-          : 'Já tem conta? Faça login'}
+          ? "Don't have an account? Sign up here"
+          : 'Already have an account? Login'}
       </ToggleText>
     </Container>
   )
 }
-
-export { Login }
