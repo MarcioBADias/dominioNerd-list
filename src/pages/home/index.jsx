@@ -1,256 +1,217 @@
-// Home.jsx
-
-import { useEffect, useState } from 'react'
+import { useEffect, useReducer, useCallback } from 'react'
 import { supabase } from '../../services/supabase'
-import { useItemContext } from '../../context/ItemReducer'
-import {
-  BackdropStyle,
-  Check,
-  Container,
-  Image,
-  Item,
-  ItemInfo,
-  ItemList,
-  ModalStyle,
-  FloatingCartButton,
-  FloatingTextButton,
-} from './style'
+import { useItemContext, itemActionTypes } from '../../context/ItemReducer'
+import { Container, ItemList, BackdropStyle, ModalStyle } from './style'
 import { QuantitySelector } from '../../components/QuantitySelector'
 import { EditionSelector } from '../../components/EditionSelector'
-import { BsCartCheckFill } from 'react-icons/bs'
+import { ItemCard } from './components/ItemCard'
+import { OrderSuccessPopup } from './components/OrderSuccessPopup'
+import { CheckoutFloatingButton } from './components/CheckoutFloatingButton'
+import {
+  homePageReducer,
+  initialHomePageState,
+  homePageActionTypes,
+} from './homePageReducer'
 
-const Home = ({ openPopup, onHandleSandOrders }) => {
-  const { state, dispatch } = useItemContext()
-  const [selectedItems, setSelectedItems] = useState([])
-  const [selectedEdition, setSelectedEdition] = useState(null)
-  const [showSuccessMessage, setShowSuccessMessage] = useState(false)
-
-  const selectedItemObjects = state.items.filter((item) =>
-    selectedItems.includes(item.id),
+export const HomePage = () => {
+  const { state: itemContextState, dispatch: itemContextDispatch } =
+    useItemContext()
+  const [pageState, pageDispatch] = useReducer(
+    homePageReducer,
+    initialHomePageState,
   )
 
-  const toggleSelect = (itemId) => {
-    setSelectedItems((prev) =>
-      prev.includes(itemId)
-        ? prev.filter((id) => id !== itemId)
-        : [...prev, itemId],
-    )
-  }
+  const { allItems, currentOrderProspects } = itemContextState
+  const { selectedEdition, isQuantityPopupOpen, isSuccessPopupVisible } =
+    pageState
 
   useEffect(() => {
-    const fetchItems = async () => {
+    const fetchItemsFromDB = async () => {
       const { data, error } = await supabase
         .from('itens')
         .select('*')
         .eq('for_sale', true)
+        .order('name', { ascending: true })
       if (error) {
-        console.error('Erro ao buscar itens:', error)
+        console.error('Error fetching items:', error)
       } else {
-        const itensComCheck = data.map((item) => ({ ...item, checked: false }))
-        dispatch({ type: 'LOAD_ITEMS', payload: itensComCheck })
+        itemContextDispatch({
+          type: itemActionTypes.LOAD_ALL_ITEMS,
+          payload: data,
+        })
       }
     }
+    fetchItemsFromDB()
+  }, [itemContextDispatch])
 
-    fetchItems()
+  const handleToggleItemSelection = useCallback(
+    (itemId) => {
+      itemContextDispatch({
+        type: itemActionTypes.TOGGLE_ITEM_CHECK_STATUS,
+        payload: { id: itemId },
+      })
+    },
+    [itemContextDispatch],
+  )
+
+  const handleEditionSelect = useCallback((editionKey) => {
+    pageDispatch({
+      type: homePageActionTypes.SET_SELECTED_EDITION,
+      payload: editionKey,
+    })
   }, [])
 
-  const handleCloseSuccessPopup = () => {
-    setShowSuccessMessage(false)
-    onHandleSandOrders()
-    window.location.reload()
-  }
+  const handleOpenQuantityPopup = useCallback(() => {
+    itemContextDispatch({
+      type: itemActionTypes.PREPARE_ITEMS_FOR_ORDER_CONFIGURATION,
+    })
+    pageDispatch({ type: homePageActionTypes.OPEN_QUANTITY_POPUP })
+  }, [itemContextDispatch])
 
-  const checkout = async (quantities) => {
-    const user = JSON.parse(localStorage.getItem('user'))
-    console.log(user.name)
+  const handleCloseQuantityPopup = useCallback(() => {
+    pageDispatch({ type: homePageActionTypes.CLOSE_QUANTITY_POPUP })
+    itemContextDispatch({
+      type: itemActionTypes.CLEAR_ITEMS_FOR_ORDER_CONFIGURATION,
+    })
+  }, [itemContextDispatch])
 
-    let firstInsertedOrderId = null
+  const handleCloseSuccessPopup = useCallback(() => {
+    pageDispatch({ type: homePageActionTypes.HIDE_SUCCESS_POPUP })
+    pageDispatch({ type: homePageActionTypes.RESET_PAGE_STATE })
+  }, [])
+
+  const handleCheckout = async (quantitiesByItemId) => {
+    const userString = localStorage.getItem('user')
+    if (!userString) {
+      alert('User not found. Please log in.')
+      return
+    }
+    const currentUser = JSON.parse(userString)
+    let firstSuccessfullyInsertedOrderId = null
 
     try {
-      for (const item of selectedItemObjects) {
-        const quantidadeSelecionada = quantities[item.id]
+      for (const prospectItem of currentOrderProspects) {
+        const selectedQuantity = quantitiesByItemId[prospectItem.id]
+        if (!selectedQuantity || selectedQuantity <= 0) continue
 
-        if (quantidadeSelecionada <= 0) continue
+        const { data: insertedOrderData, error: orderInsertError } =
+          await supabase
+            .from('orders')
+            .insert({
+              item_id: prospectItem.id,
+              item_name: prospectItem.name,
+              price: prospectItem.price,
+              quantity: selectedQuantity,
+              purchaser: currentUser?.name || 'Unknown Purchaser',
+              contact: currentUser?.phone || '',
+            })
+            .select('id')
+            .single()
 
-        const { data: insertedOrder, error: orderError } = await supabase
-          .from('orders')
-          .insert({
-            item_id: item.id,
-            item_name: item.name,
-            price: item.price,
-            quantity: quantidadeSelecionada,
-            purchaser: user?.name || 'desconhecido',
-            contact: user?.phone || '',
-          })
-          .select()
+        if (orderInsertError) throw orderInsertError
 
-        if (orderError) {
-          console.error('Erro ao inserir pedido:', orderError)
-          throw new Error('Erro ao registrar um dos itens do pedido.')
+        if (insertedOrderData && firstSuccessfullyInsertedOrderId === null) {
+          firstSuccessfullyInsertedOrderId = insertedOrderData.id
         }
 
-        if (
-          firstInsertedOrderId === null &&
-          insertedOrder &&
-          insertedOrder.length > 0
-        ) {
-          firstInsertedOrderId = insertedOrder[0].id
-        }
-
-        const novaQuantidade = item.quantity - quantidadeSelecionada
-        const { error: updateError } = await supabase
-          .from('itens')
-          .update({
-            quantity: novaQuantidade,
-            for_sale: novaQuantidade > 0,
-          })
-          .eq('id', item.id)
-
-        if (updateError) {
-          console.error('Erro ao atualizar estoque:', updateError)
-          throw new Error('Erro ao atualizar estoque de um dos itens.')
-        }
+        itemContextDispatch({
+          type: itemActionTypes.UPDATE_ITEM_STOCK_POST_ORDER,
+          payload: {
+            itemId: prospectItem.id,
+            orderedQuantity: selectedQuantity,
+          },
+        })
       }
 
-      setSelectedItems([])
+      itemContextDispatch({
+        type: itemActionTypes.CLEAR_ITEMS_FOR_ORDER_CONFIGURATION,
+      })
+      pageDispatch({ type: homePageActionTypes.SHOW_SUCCESS_POPUP })
 
-      setShowSuccessMessage(true)
+      const userNameFormatted = currentUser?.name?.split(' ')[0] || 'Customer'
+      let whatsappMsg = `Hello *${userNameFormatted}*,\n\nYour order *#${firstSuccessfullyInsertedOrderId || 'N/A'}* has been registered and will be confirmed shortly.`
+      whatsappMsg += `\n\nItems:\n`
+      let orderTotalForWhatsapp = 0
 
-      const nomeFormatado = user?.name?.split(' ')[0] || 'Cliente'
-      let mensagemWhatsapp = `Olá *${nomeFormatado}*,\n\nSeu pedido foi registrado com número *${firstInsertedOrderId || 'ID_INDISPONIVEL'}* e será confirmado em breve.`
-      mensagemWhatsapp += `\n\nSegue a lista abaixo:\n`
-
-      selectedItemObjects.forEach((item) => {
-        const quantidadeSelecionada = quantities[item.id] || 0
-        if (quantidadeSelecionada > 0) {
-          mensagemWhatsapp += `\n• ${item.name} (x${quantidadeSelecionada}) - R$ ${(item.price * quantidadeSelecionada).toFixed(2)}`
+      currentOrderProspects.forEach((item) => {
+        const qty = quantitiesByItemId[item.id] || 0
+        if (qty > 0) {
+          whatsappMsg += `\n• ${item.name} (x${qty}) - R$ ${(item.price * qty).toFixed(2)}`
+          orderTotalForWhatsapp += item.price * qty
         }
       })
+      whatsappMsg += `\n\n*Total: R$ ${orderTotalForWhatsapp.toFixed(2)}*.`
+      whatsappMsg += `\n\nFor changes, please let us know!`
 
-      const totalPedidoWhatsapp = selectedItemObjects.reduce((acc, item) => {
-        const quantidadeSelecionada = quantities[item.id] || 0
-        return acc + item.price * quantidadeSelecionada
-      }, 0)
-      mensagemWhatsapp += `\n\n*Total: R$ ${totalPedidoWhatsapp.toFixed(2)}*.`
-      mensagemWhatsapp += `\n\nPara alterações, é só avisar!`
-
-      const telefone = `55${user?.phone?.replace(/\D/g, '') || ''}`
-      if (telefone && telefone.length > 2) {
-        const url = `https://wa.me/${telefone}?text=${encodeURIComponent(mensagemWhatsapp)}`
-        window.open(url, '_blank')
+      const userPhoneNumber = currentUser?.phone?.replace(/\D/g, '')
+      if (userPhoneNumber && userPhoneNumber.length > 2) {
+        const whatsappUrl = `https://wa.me/55${userPhoneNumber}?text=${encodeURIComponent(whatsappMsg)}`
+        window.open(whatsappUrl, '_blank')
       } else {
-        console.warn(
-          'Número de telefone do usuário não encontrado para enviar WhatsApp.',
-        )
+        console.warn('User phone number not found for WhatsApp notification.')
       }
     } catch (error) {
-      console.error('Falha no processo de checkout:', error.message)
+      console.error('Checkout process failed:', error)
       alert(
-        'Ocorreu um erro ao finalizar o pedido. Por favor, tente novamente.',
+        `An error occurred while finalizing the order: ${error.message}. Please try again.`,
       )
-      onHandleSandOrders()
+      pageDispatch({ type: homePageActionTypes.CLOSE_QUANTITY_POPUP })
     }
   }
+  const filteredDisplayItems = allItems.filter(
+    (item) =>
+      (!selectedEdition || item.edition === selectedEdition) && item.for_sale,
+  )
+  const itemsSelectedForCheckoutCount = allItems.filter(
+    (item) => item.isChecked && item.quantity > 0,
+  ).length
 
   return (
     <Container>
-      <h1 style={{ textAlign: 'center' }}>Lista de Itens</h1>
+      <h1 style={{ textAlign: 'center', marginBottom: '20px' }}>Item List</h1>
       <div>
-        <p style={{ fontSize: 12, fontWeight: 'bold', textAlign: 'center' }}>
-          Filtro por edição:
+        <p
+          style={{
+            fontSize: '0.9em',
+            fontWeight: 'bold',
+            textAlign: 'center',
+            marginBottom: '10px',
+          }}
+        >
+          Filter by Edition:
         </p>
         <EditionSelector
           selectedEdition={selectedEdition}
-          onSelect={setSelectedEdition}
+          onSelect={handleEditionSelect}
         />
       </div>
       <ItemList>
-        {state.items
-          .filter(
-            (item) => !selectedEdition || item.edition === selectedEdition,
-          )
-          .map((item) => (
-            <Item key={item.id} onClick={() => toggleSelect(item.id)}>
-              <Check
-                type="checkbox"
-                checked={selectedItems.includes(item.id)}
-              />
-              <ItemInfo>
-                <div>
-                  <Image
-                    src={`https://hcunits.net/static/images/set/${item.edition}/${item.serialNumber}.png`}
-                    alt=""
-                  />
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column' }}>
-                  <strong>{item.name}</strong>
-                  <span>R$ {item.price},00</span>
-                  <span>Qtd: {item.quantity} und</span>
-                  <span>
-                    <a
-                      href={`https://hcunits.net/units/${item.edition}${item.serialNumber}/`}
-                      target="_blank"
-                    >
-                      Ver card
-                    </a>
-                  </span>
-                </div>
-              </ItemInfo>
-            </Item>
-          ))}
+        {filteredDisplayItems.map((item) => (
+          <ItemCard
+            key={item.id}
+            item={item}
+            isSelected={item.isChecked}
+            onToggleSelect={handleToggleItemSelection}
+          />
+        ))}
       </ItemList>
+      {itemsSelectedForCheckoutCount > 0 && (
+        <CheckoutFloatingButton
+          selectedItemsCount={itemsSelectedForCheckoutCount}
+          onClick={handleOpenQuantityPopup}
+        />
+      )}
 
-      <div onClick={onHandleSandOrders}>
-        <FloatingCartButton>
-          <BsCartCheckFill size={30} color="white" />
-          {selectedItems.length > 0 && (
-            <span
-              style={{
-                position: 'absolute',
-                top: 5,
-                right: 5,
-                backgroundColor: '#b83242',
-                color: 'white',
-                borderRadius: '50%',
-                padding: '2px 6px',
-                fontSize: '0.7em',
-                fontWeight: 'bold',
-              }}
-            >
-              {selectedItems.length}
-            </span>
-          )}
-        </FloatingCartButton>
-        <FloatingTextButton>
-          Fechar <br /> Pedido
-        </FloatingTextButton>
-      </div>
-      {openPopup && (
-        <BackdropStyle>
-          <ModalStyle>
-            {showSuccessMessage ? (
-              <div style={{ textAlign: 'center', padding: '20px' }}>
-                <h2>Seu pedido foi realizado com sucesso!</h2>
-                <p>Você receberá uma confirmação via WhatsApp.</p>
-                <button
-                  style={{
-                    padding: '10px 20px',
-                    backgroundColor: '#222',
-                    color: 'white',
-                    borderRadius: '10px',
-                    marginTop: '20px',
-                    cursor: 'pointer',
-                  }}
-                  onClick={handleCloseSuccessPopup}
-                >
-                  Fechar
-                </button>
-              </div>
+      {isQuantityPopupOpen && (
+        <BackdropStyle onClick={handleCloseQuantityPopup}>
+          <ModalStyle onClick={(e) => e.stopPropagation()}>
+            {isSuccessPopupVisible ? (
+              <OrderSuccessPopup onClose={handleCloseSuccessPopup} />
             ) : (
               <QuantitySelector
-                items={selectedItemObjects}
-                onSubmit={checkout}
-                onCancel={onHandleSandOrders}
+                items={currentOrderProspects}
+                onSubmit={handleCheckout}
+                onCancel={handleCloseQuantityPopup}
               />
             )}
           </ModalStyle>
@@ -259,5 +220,3 @@ const Home = ({ openPopup, onHandleSandOrders }) => {
     </Container>
   )
 }
-
-export { Home }
